@@ -208,6 +208,8 @@ double minCV_costChange (
   double  fixedVar;
   size_t  Hi, Hj, d; 
 
+  double NhSizeHj, NhSizeHi, nhSizeHi, nhSizeHj;
+
   /* figure out change in cost */
   Hi = I[i]; 
   Hj = I[j];
@@ -221,6 +223,8 @@ double minCV_costChange (
   for(d = 0; d < dN; d++) {
 
 #ifdef DEBUG 
+   printf(" ==== d = %d ==== \n", (int) d);
+   printf("dij = %f\n", dij);
    printf("Q[%zu] =%f\n",d, Q[d]);  
    printf("V[%zu][%zu] =%f\n",d,Hi, V[d][Hi]);  
    printf("V[%zu][%zu] =%f\n",d,Hj, V[d][Hj]);  
@@ -234,7 +238,8 @@ double minCV_costChange (
    printf("NhSize[%zu] =%zu\n",Hj, NhSize[Hj]);  
 #endif
 
-    dij = getDistX(i,j,x,k,d,N,squaredEuclidianMeanDist); 
+    
+   dij = getDistX(i,j,x,k,d,N,squaredEuclidianMeanDist); 
 
     /* get the variance total for the otehr strata */
     fixedVar = 0;
@@ -246,37 +251,40 @@ double minCV_costChange (
     }
 
     /* proposed new population size for Hj */
-    NhSize.Hj = (double) NhSize[Hj] + size[i] - size[j]; 
+    NhSizeHj = (double) NhSize[Hj] + size[i] - size[j]; 
 
     /* proposed new population size for Hi */
-    NhSize.Hi = (double) NhSize[Hi] + size[j] - size[i]; 
+    NhSizeHi = (double) NhSize[Hi] + size[j] - size[i]; 
 
     /* proposed new sample size for Hj */
-    nhSize.Hj = (double) sampleSize[Hj] + size[i] - size[j]; 
+    nhSizeHj = (double) sampleSize[Hj] + size[i] - size[j]; 
 
     /* proposed new sample size for Hi */
-    nhSize.Hi = (double) sampleSize[Hi] + size[j] - size[i]; 
+    nhSizeHi = (double) sampleSize[Hi] + size[j] - size[i]; 
 
+/*
     printf("Proposed Var[%d][%d] = %f\n", (int) d, (int) Hj,  
-        (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] - C[d][j][Hj] - dij ) / 
-        ( (NhSize.Hj - 1) * (nhSize.Hj) ) * NhSize.Hj); 
+        (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] - C[d][j][Hj] - dij )  /
+         ( (NhSizeHj - 1) * NhSizeHj ) 
+        ); 
     
     printf("Proposed Var[%d][%d] = %f\n", (int) d, (int) Hi,  
-        (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] + C[d][j][Hi] -dij ) / 
-        ( (NhSize.Hi - 1) * (nhSize.Hj) ) * NhSize.Hj );
-
+        (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] + C[d][j][Hi] -dij ) /
+        ( (NhSizeHi - 1) * NhSizeHj )
+        );
+*/
 
     /* get the distance between */
     R[d] =
       sqrt( fixedVar + 
         (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] - C[d][j][Hj] - dij ) / 
-        ( (NhSize.Hj - 1) * (nhSize.Hj) ) * NhSize.Hj 
+        ( (NhSizeHj - 1) * (nhSizeHj) ) * NhSizeHj 
         + 
         (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] + C[d][j][Hi] -dij ) / 
-        ( (NhSize.Hi - 1) * (nhSize.Hj) ) * NhSize.Hj 
+        ( (NhSizeHi - 1) * (nhSizeHj) ) * NhSizeHj 
       ) / Total[d] - T[d];
 
-  printf("R[d] = %f, R[d] - Q[d] = %f \n", R[d], R[d] - Q[d]);
+//  printf("R[d] = %f, R[d] - Q[d] = %f \n", R[d], R[d] - Q[d]);
 
     /* get the max change in CV */
     if( R[d] > 0 ) 
@@ -958,7 +966,7 @@ double *** minCV_createContribMatrix( size_t * label, size_t dN, size_t N, size_
       {
       C[i][j][m] = 0;
       for( l = 0; l < Nh[m]; l++)
-        C[i][j][m] += getDistX(i,L[m][l],x,k,i,N,squaredEuclidianMeanDist); 
+        C[i][j][m] += getDistX(j,L[m][l],x,k,i,N,squaredEuclidianMeanDist); 
         //C[i][j][m] += getDist(j,L[m][l],D,i,N); 
       }
 
