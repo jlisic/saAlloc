@@ -1,0 +1,3 @@
+useDynLib(saAlloc)
+export(saEqualClus)
+export(saMinCV)
