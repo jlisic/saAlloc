@@ -55,6 +55,134 @@ void minCV_init (
 }
 
 
+  
+
+int getPossibleMovesAcres( 
+  size_t possibleMoves,
+  size_t H,
+  double * acres,      /*  */
+  double acreDif,      /*  */
+  double * NhAcres,    /* Nh acres */
+  size_t ** L,         /* Stratum assignment H x N */
+  size_t * Nh         /* strata PSU count */
+) {
+  
+  size_t  Hi, Hj, j, k, i,l; 
+  
+  /* get minimum acres */
+  minAcres = NhAcres[0];
+  for( j = 0, minAcres = INFINITY;  j < H; j++)
+    if( NhAcres[j] < minAcres ) { 
+      minAcres = NhAcres[j];
+    }
+
+  /* keep generating candiate moves until you try N*H times, then give up */ 
+  l = 0;
+  k = 0;
+  while(k < 1) {
+
+    /* generate a canidate */ 
+    i = SA_GETINDEX(N);
+#ifdef DEBUG
+    printf("k=%zu : canidate i=%zu, N= %zu, test=%f\n", k,i,N, runif(0.0,1.0)  );
+#endif
+    Hi = I[i];
+    k = 0; /* number of places to move to */ 
+
+    /* if the change is going to be below the smallest number of acres  */
+    /* use the acres of the proposed change to check acreDif instead of minAcres */
+    if( NhAcres[Hi] - acres[i] < minAcres )  {
+      for( j = 0; j < H; j++) {
+        if(Hi == j) continue;
+        /* add to possible moves if the move does not violate acre difference */
+        if((1 - (minAcres - acres[i])/( NhAcres[j] + acres[i] )) < acreDif ) {
+          possibleMoves[k]=j;
+          k++;
+        }
+      }
+    } else {
+      for( j = 0; j < H; j++) {
+        if(Hi == j) continue;
+        /* add to possible moves if the move does not violate acre difference */
+        if((1 - minAcres/( NhAcres[j] + acres[i] )) < acreDif ) {
+          possibleMoves[k]=j;
+          k++;
+        }
+      }
+    }
+      
+
+    if( l > N * H ) {
+      #ifndef CLI
+      Rprintf("No Movement Likely Possible, Terminating\n");
+      #endif 
+      #ifdef CLI
+      printf("No Movement Likely Possible, Terminating\n");
+      #endif 
+      
+      return(N+1);
+    }
+    l++;
+  }
+
+  return(0);
+}
+
+
+
+/* get a new random state */
+size_t minCV_randomState (
+            size_t * I,            /* current state                           */
+            double * Q,            /* current cost                            */
+            size_t * J,            /* new state                               */
+            double * R,            /* new cost                                */
+            double * D,            /* distance matrix                         */
+            void * A,              /* administrative data                     */
+            size_t dN,             /* number of distance matricies            */
+            size_t N               /* number of elements within a state       */
+    ) { 
+
+  size_t  Hi, Hj, H, j, k, i,l; 
+  minCV_adminStructPtr a;
+  double *  acres; 
+  double * NhAcres;
+  double minAcres;
+  double acreDif;
+  size_t ** L;
+  size_t * Nh;
+
+  size_t * possibleMoves; /* array to hold possible moves */
+
+  /* cast A back to somethine useable */
+  a = (minCV_adminStructPtr) A; 
+  H = a->H;
+  acres = a->acres; 
+  acreDif = a->acreDif; 
+  NhAcres = a->NhAcres; 
+  L = a->L;
+  Nh = a->Nh;
+
+
+  /* create some space to hold possible moves */
+  possibleMoves = (size_t *) malloc(sizeof(size_t) * H); 
+
+
+
+  /* add to our data structure our next move */ 
+  Rprintf("possibleMoves: Hi = %d\n", (int) Hi); 
+  for( l = 0; l < k; l++) Rprintf("posMov: %d\n",(int) possibleMoves[l]);
+
+  Hj = possibleMoves[SA_GETINDEX(k)];
+  printf("Chosen Hj = %d\n", (int) Hj );
+
+  a->j = L[Hj][ SA_GETINDEX( Nh[Hj] ) ];
+  printf("j = %d", (int) a->j); 
+
+  free(possibleMoves);
+
+  return(i);
+}
+
 
 
 /* get a new random state */
@@ -393,6 +521,8 @@ void minCV_update (
    //dij = getDist(i,j,D,d,N); 
    dij = getDistX(i,j,x,k,d,N,squaredEuclidianMeanDist); 
    /* update the variance, this must be done before C gets updated */
+
+
    V[d][Hj] = 
         (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] - C[d][j][Hj] - dij) / ( (double)  (NhSize[Hj] + size[i] -size[j] - 1) *(NhSize[Hj] + size[i] -size[j] ) );
 
@@ -405,7 +535,7 @@ void minCV_update (
      //dil = getDist(i,l,D,d,N); 
      //djl = getDist(j,l,D,d,N);
      dil = getDistX(i,l,x,k,d,N,squaredEuclidianMeanDist); 
-     djl = getDistX(i,l,x,k,d,N,squaredEuclidianMeanDist); 
+     djl = getDistX(j,l,x,k,d,N,squaredEuclidianMeanDist); 
     
 
      /* Hj is j's old index */
@@ -734,7 +864,12 @@ void minCV_diag(
   #ifndef CLI
   Rprintf("\n************************* i = %d **************************\n",(int) i);
   Rprintf("\nNhMax: %d\n", (int) NhMax);
-
+ 
+ /* 
+  for( d =0; d < dN; d++) 
+    Rprintf("\nC[%d]\n",(int) d),
+    printMatrixFullDbl(C[d], N, H ); 
+*/
 
   Rprintf("\nQ\n");
   Rprintf("sqrt(n) * CV_j - TCV_j\n");

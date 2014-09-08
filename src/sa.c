@@ -209,10 +209,10 @@ void printMatrixFullDbl(double ** X , size_t row, size_t col ) {
     #endif
     for(j = 0; j < col; j++) {
       #ifndef CLI 
-      Rprintf("%0.2f\t",X[i][j]);
+      Rprintf("%0.4f\t",X[i][j]);
       #endif 
       #ifdef CLI
-      printf("%0.2f\t",X[i][j]);
+      printf("%0.4f\t",X[i][j]);
       #endif
     }
     #ifndef CLI 
