@@ -139,6 +139,11 @@ size_t minCV_randomState (
   
     /* can I make a potential move neighbors */
     j = minCV_getMoveNeighbor( i, I, prob, neighbors, nNeighbors, N);
+
+   printf("Selected:\n i = %d, Hi = %d\n j = %d\n Hj = %d\n", 
+       (int) i, (int) I[i], (int) j, (int) I[j] 
+       );
+
   }
 
   /* save j */
@@ -170,7 +175,7 @@ size_t minCV_getMoveNeighbor(
   for( j=0; j < nNeighbors; j++) { 
 
     /* get the current neighbor of i */
-    currentNeighbor = neighbors[i*N*nNeighbors + j];
+    currentNeighbor = neighbors[i*nNeighbors + j];
 
     /* get the sum of the weight and number of neighbors not in the same strata as i */
     if( I[ currentNeighbor ] != Hi ) {
@@ -189,10 +194,12 @@ size_t minCV_getMoveNeighbor(
 
   /* find the neighbor that corresponds to the selected sampling weight */ 
   for( j=0; j < nNeighbors; j++) { 
-    currentNeighbor = neighbors[i*N*nNeighbors + j];
+    currentNeighbor = neighbors[i*nNeighbors + j];
     total += prob[currentNeighbor];
     if( total <= totalProb) break;  
   }
+  
+  Rprintf("\nminCV_getMoveNeighbor:  index = %d, total = %f, target = %f\n", (int) j, total, totalProb);
 
   return( currentNeighbor ) ;
 }
@@ -210,6 +217,12 @@ size_t minCV_getIndex( double * prob, double totalProbability ) {
     total += prob[index];
     index++;
   }
+
+  Rprintf("\nminCV_getIndex:  index = %d, total = %f, totalProbability = %f, target = %f\n", 
+      (int) index, 
+      total, 
+      totalProbability,
+      searchProbability);
 
   return( index );
 }
@@ -616,9 +629,6 @@ void * minCV_packSubstrata(
     probMatrix[i] = aDbl[2*N + 3*dN + H + i]; 
   packedStruct->probMatrix = probMatrix;
   
-  packedStruct->totalProbability = aDbl[(H + 2)*N + 3*dN + H]; 
-  
-
   /* make assignments to struct */
   packedStruct->H = H;
   packedStruct->Nh = Nh;
@@ -635,12 +645,15 @@ void * minCV_packSubstrata(
   packedStruct->Total = Total;
   packedStruct->x = x;
   packedStruct->k = k;
+  packedStruct->totalProbability = aDbl[NDbl - 3]; 
   packedStruct->temp = aDbl[NDbl-2];
   packedStruct->acreDif = aDbl[NDbl-1 ];
   packedStruct->sampleSize = sampleSize;
   
   return( (void *) packedStruct );
 }
+
+
 
 
 /* clean up for the substrata administrative data */
@@ -713,7 +726,7 @@ void minCV_diag(
     ) {
 
   double *** C;
-  size_t H, NhMax, d;
+  size_t H, NhMax, d,f;
   size_t * Nh;
   double * T;
   double ** V;
@@ -734,6 +747,12 @@ void minCV_diag(
   V = a->V;
   Total = a->Total;
 
+  double * prob = a->prob;
+  double * probMatrix = a->probMatrix;
+
+  size_t nNeighbors = a->nNeighbors;
+  size_t * neighbors = a->neighbors;
+
   acres = a->acres;
   size = a->size;
   NhSize = a->NhSize;
@@ -741,56 +760,6 @@ void minCV_diag(
   double * sampleSize = a->sampleSize; 
 
 
-  #ifdef CLI
-  printf("\n************************* i = %d **************************\n",(int) i);
-  printf("\nNhMax: %d\n", (int) NhMax);
-
-  /*
-  for( d =0; d < dN; d++) 
-    printf("\nC[%d]\n",(int) d),
-    printMatrixFullDbl(C[d], N, H ); 
-  
-  printf("\nI,size,acres\n");
-  for( d =0; d < N; d++) 
-    printf("%d:  %d  %d  %f\n",(int) d, (int) I[d], (int) size[d], acres[d]); 
- */
-  
-  printf("\nQ\n");
-  printf("sqrt(n) * CV_j - TCV_j\n");
-  for( d =0; d < dN; d++) 
-    printf("%d:  %f\n",(int) d, Q[d]); 
-  printf("max{ sqrt(n) * CV_j - TCV_j }\n");
-  printf("%d:  %f\n",(int) dN, Q[dN]); 
-  
-  printf("\nNh\n");
-  for( d =0; d < H; d++) 
-    printf("%d:  %d\n",(int) d, (int) Nh[d]); 
-
-  printf("\nNhSize\n");
-  for( d =0; d < H; d++) 
-    printf("%d:  %d\n",(int) d, (int) NhSize[d]); 
-  
-  printf("\nNhAcres\n");
-  for( d =0; d < H; d++) 
-    printf("%d:  %f\n",(int) d, NhAcres[d]); 
-  
-  printf("\nSample Size\n");
-  for( d =0; d < H; d++) 
-    printf("%d:  %f\n",(int) d, sampleSize[d]); 
-  
-  printf("\nT\n");
-  for( d =0; d < dN; d++) 
-    printf("%d:  %f\n",(int) d, T[d]); 
-  
-  printf("\nV\n");
-    printMatrixFullDbl(V, dN, H ); 
-
-  printf("\nTotal\n");
-  for( d =0; d < dN; d++) 
-    printf("%d:  %f\n",(int) d, Total[d]); 
-
-  #endif
-  #ifndef CLI
   Rprintf("\n************************* i = %d **************************\n",(int) i);
   Rprintf("\nNhMax: %d\n", (int) NhMax);
  
@@ -806,6 +775,34 @@ void minCV_diag(
     Rprintf("%d:  %f\n",(int) d, Q[d]); 
   Rprintf("max{ sqrt(n) * CV_j - TCV_j }\n");
   Rprintf("%d:  %f\n",(int) dN, Q[dN]); 
+  
+  /* neighbors */ 
+  Rprintf("\nneighbors\n");
+  for( d =0; d < N; d++) {
+    Rprintf("%d:  ",(int) d);
+  
+    for( f =0; f < nNeighbors; f++) 
+      Rprintf("%d, ",(int) neighbors[nNeighbors*d + f] );
+
+    Rprintf("\n");
+  } 
+  
+  /* probMatrix */ 
+  Rprintf("\nprobMatrix\n");
+  for( d =0; d < N; d++) {
+    Rprintf("%d:  ",(int) d);
+  
+    for( f =0; f < H; f++) 
+      Rprintf("%f, ", probMatrix[H*d + f] );
+    
+    Rprintf("\n");
+  } 
+ 
+  /* prob */ 
+  Rprintf("\nprob\n");
+  for( d =0; d < N; d++) 
+    Rprintf("%d:  %f\n",(int) d,  prob[d]); 
+  
   
   Rprintf("\nNh\n");
   for( d =0; d < H; d++) 
@@ -833,8 +830,6 @@ void minCV_diag(
   Rprintf("\nTotal\n");
   for( d =0; d < dN; d++) 
     Rprintf("%d:  %f\n",(int) d, Total[d]); 
-
-  #endif
 
 }
   

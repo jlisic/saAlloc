@@ -88,3 +88,43 @@ print( sqrt(targetCV) )
 print("Min CV")
 print( 2*sqrt(colSums(aggregate(x,by=list(b$label),var))[-1]) / colSums(x) )
 
+
+
+
+############ rnorm ##############
+
+x <- rbind( 
+       matrix( rnorm(8 * 3), nrow=8),
+       matrix( rnorm(8 * 3), nrow=8) + 3  
+     )
+
+
+
+#target variance
+targetCV <- c(.01,.01,.01)
+
+# run minCV
+b <- saMinCV(
+x,
+label,
+iter=2000,
+cooling=0,
+targetCV=targetCV,
+sampleSize=8
+)
+
+# compare results
+print("before CV")
+print( 2*sqrt(colSums( aggregate(x,by=list(label),var))[-1]) / colSums(x) )
+
+print("Target")
+print( sqrt(targetCV) )
+
+print("Min CV")
+print( 2*sqrt(colSums(aggregate(x,by=list(b$label),var))[-1]) / colSums(x) )
+
+
+
+
+
+

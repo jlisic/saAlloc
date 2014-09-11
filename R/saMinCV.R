@@ -16,7 +16,7 @@ function(
   ) {
 
   # dependency on Fast Nearest Neighbors
-  requires(FNN)
+  require(FNN)
 
   # check if X is a matrix
   if( !is.matrix(x) ) {
@@ -42,12 +42,12 @@ function(
   #################### PROBABILITY ######################################
  
   # get prob
-  if( is.missing(prob) ) {
-    prob <- matrix( 1/N, nrow=N, ncol=d)
+  if( missing(prob) ) {
+    prob <- matrix( 1/N, nrow=N, ncol=H)
   }
 
   # check prob
-  if(( nrow(prob) != N) | (ncol(prob) != d )) {
+  if(( nrow(prob) != N) | (ncol(prob) != H )) {
     stop( sprintf("probability matrix (prob) does not have correct dimensions\n Needed (nrow = %d, ncol = %d), provided (nrow = %d, ncol = %d)\n",
                  N, d, nrow(prob), ncol(prob) ) ) 
   }
@@ -55,7 +55,7 @@ function(
   # get max prob
   maxProb <- apply(prob, 1, max) 
 
-  totalProbability <- sum(maxProb)
+  totalProb <- sum(maxProb)
 
   # create row major matrix for input to C program
   prob <- c(t(prob))
@@ -64,27 +64,27 @@ function(
   #################### NEIGHBORS ######################################
  
   # get neighbors if they are missing 
-  if( is.missing(neighbors) ) {
+  if( missing(neighbors) ) {
  
     # if the number of neighbors is missign obtain it here 
-    if( is.missing(nNeighbors) ) nNeighbors = min( 10, N ) 
+    if( missing(nNeighbors) ) nNeighbors = min( 10, N ) 
 
     # approximate the nearest neighbors
-    neighbors <- knnx.index(x, x, k=nNeighbors)  
+    neighbors <- knnx.index(x, x, k=nNeighbors+1)  
     
     # get neighbors and correct for C indexing
     neighbors <- c( 
       sapply( 
-        1:nrow(neighborsIndex), 
+        1:N, 
         function(x) { 
-          z <- neighborsIndex[x,] 
+          z <- neighbors[x,] 
           z[ z != x][1:(length(z) - 1)] 
         } ) 
       ) - 1  # minus one here to adjust for 0 indexes in C
   } else {
     
     # if the number of neighbors is missign obtain it here 
-    if( is.missing(nNeighbors) ) nNeighbors = ncol(neighbors) 
+    if( missing(nNeighbors) ) nNeighbors = ncol(neighbors) 
 
     # if neighbors are not missing make sure they are 'correct' 
     if(( nrow(neighbors) != N) | (ncol(neighbors) != nNeighbors )) {
@@ -121,14 +121,25 @@ function(
   }
 
   # group data together for input
-  adminDbl <- c( PSUAcres, targetCV, targetVarWithin, total, sampleSize, cooling, tolSize, maxProb, prob, totalProb)
+  adminDbl <- c( 
+    PSUAcres, 
+    targetCV, 
+    targetVarWithin, 
+    total, 
+    sampleSize, 
+    maxProb, 
+    prob, 
+    totalProb,
+    cooling, 
+    tolSize 
+  )
   adminDblLength <- length( adminDbl )
   adminInt <- c(segments, nNeighbors, neighbors) 
   adminIntLength <- length( adminInt )
 
   dup <- c() 
 
-  print(total)
+
   print(k)
   print(d)
   print(N)
