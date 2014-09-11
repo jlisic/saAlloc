@@ -56,9 +56,11 @@ void minCV_init (
 
 
   
-
-int getPossibleMovesAcres( 
-  size_t possibleMoves,
+/* function to get possible moves under acreage constraints */
+size_t minCV_getPossibleMovesAcres(
+  size_t index,         /* index to move from */ 
+  size_t * I,           /* indexs of assignments */
+  size_t * possibleMoves,
   size_t H,
   double * acres,      /*  */
   double acreDif,      /*  */
@@ -67,65 +69,41 @@ int getPossibleMovesAcres(
   size_t * Nh         /* strata PSU count */
 ) {
   
-  size_t  Hi, Hj, j, k, i,l; 
+  size_t  Hi, j;
+  size_t k = 0; /* number of moves */
+
+  double minAcres = NhAcres[0]; /* minimum acres for any stratum, initialize with the first Acres */
   
   /* get minimum acres */
-  minAcres = NhAcres[0];
   for( j = 0, minAcres = INFINITY;  j < H; j++)
-    if( NhAcres[j] < minAcres ) { 
-      minAcres = NhAcres[j];
-    }
+    if( NhAcres[j] < minAcres ) minAcres = NhAcres[j];
 
-  /* keep generating candiate moves until you try N*H times, then give up */ 
-  l = 0;
-  k = 0;
-  while(k < 1) {
+  /* generate a canidate */ 
+  Hi = I[index]; /* get stratum of canidate */
 
-    /* generate a canidate */ 
-    i = SA_GETINDEX(N);
-#ifdef DEBUG
-    printf("k=%zu : canidate i=%zu, N= %zu, test=%f\n", k,i,N, runif(0.0,1.0)  );
-#endif
-    Hi = I[i];
-    k = 0; /* number of places to move to */ 
-
-    /* if the change is going to be below the smallest number of acres  */
-    /* use the acres of the proposed change to check acreDif instead of minAcres */
-    if( NhAcres[Hi] - acres[i] < minAcres )  {
-      for( j = 0; j < H; j++) {
-        if(Hi == j) continue;
-        /* add to possible moves if the move does not violate acre difference */
-        if((1 - (minAcres - acres[i])/( NhAcres[j] + acres[i] )) < acreDif ) {
-          possibleMoves[k]=j;
-          k++;
-        }
-      }
-    } else {
-      for( j = 0; j < H; j++) {
-        if(Hi == j) continue;
-        /* add to possible moves if the move does not violate acre difference */
-        if((1 - minAcres/( NhAcres[j] + acres[i] )) < acreDif ) {
-          possibleMoves[k]=j;
-          k++;
-        }
+  /* if the change is going to be below the smallest number of acres  */
+  /* use the acres of the proposed change to check acreDif instead of minAcres */
+  if( NhAcres[Hi] - acres[index] < minAcres )  {
+    for( j = 0; j < H; j++) {
+      if(Hi == j) continue;
+      /* add to possible moves if the move does not violate acre difference */
+      if((1 - (minAcres - acres[index])/( NhAcres[j] + acres[index] )) < acreDif ) {
+        possibleMoves[k]=j;
+        k++;
       }
     }
-      
-
-    if( l > N * H ) {
-      #ifndef CLI
-      Rprintf("No Movement Likely Possible, Terminating\n");
-      #endif 
-      #ifdef CLI
-      printf("No Movement Likely Possible, Terminating\n");
-      #endif 
-      
-      return(N+1);
+  } else {
+    for( j = 0; j < H; j++) {
+      if(Hi == j) continue;
+      /* add to possible moves if the move does not violate acre difference */
+      if((1 - minAcres/( NhAcres[j] + acres[index] )) < acreDif ) {
+        possibleMoves[k]=j;
+        k++;
+      }
     }
-    l++;
   }
-
-  return(0);
+      
+  return(k);
 }
 
 
@@ -142,162 +120,102 @@ size_t minCV_randomState (
             size_t N               /* number of elements within a state       */
     ) { 
 
-  size_t  Hi, Hj, H, j, k, i,l; 
   minCV_adminStructPtr a;
-  double *  acres; 
-  double * NhAcres;
-  double minAcres;
-  double acreDif;
-  size_t ** L;
-  size_t * Nh;
 
-  size_t * possibleMoves; /* array to hold possible moves */
+  //size_t * possibleMoves; /* array to hold possible moves */
 
   /* cast A back to somethine useable */
   a = (minCV_adminStructPtr) A; 
-  H = a->H;
-  acres = a->acres; 
-  acreDif = a->acreDif; 
-  NhAcres = a->NhAcres; 
-  L = a->L;
-  Nh = a->Nh;
+  double * prob = a->prob;
+  size_t * neighbors = a->neighbors;
+  size_t nNeighbors = a->nNeighbors;
+  double totalProbability = a->totalProbability;
+  size_t i; 
+  size_t j = N;
 
-
-  /* create some space to hold possible moves */
-  possibleMoves = (size_t *) malloc(sizeof(size_t) * H); 
-
-
-
-  /* add to our data structure our next move */ 
-  Rprintf("possibleMoves: Hi = %d\n", (int) Hi); 
-  for( l = 0; l < k; l++) Rprintf("posMov: %d\n",(int) possibleMoves[l]);
-
-  Hj = possibleMoves[SA_GETINDEX(k)];
-  printf("Chosen Hj = %d\n", (int) Hj );
-
-  a->j = L[Hj][ SA_GETINDEX( Nh[Hj] ) ];
-  printf("j = %d", (int) a->j); 
-
-  free(possibleMoves);
-
-  return(i);
-}
-
-
-
-/* get a new random state */
-size_t minCV_randomState (
-            size_t * I,            /* current state                           */
-            double * Q,            /* current cost                            */
-            size_t * J,            /* new state                               */
-            double * R,            /* new cost                                */
-            double * D,            /* distance matrix                         */
-            void * A,              /* administrative data                     */
-            size_t dN,             /* number of distance matricies            */
-            size_t N               /* number of elements within a state       */
-    ) { 
-
-  size_t  Hi, Hj, H, j, k, i,l; 
-  minCV_adminStructPtr a;
-  double *  acres; 
-  double * NhAcres;
-  double minAcres;
-  double acreDif;
-  size_t ** L;
-  size_t * Nh;
-
-  size_t * possibleMoves; /* array to hold possible moves */
-
-  /* cast A back to somethine useable */
-  a = (minCV_adminStructPtr) A; 
-  H = a->H;
-  acres = a->acres; 
-  acreDif = a->acreDif; 
-  NhAcres = a->NhAcres; 
-  L = a->L;
-  Nh = a->Nh;
-
-
-  /* create some space to hold possible moves */
-  possibleMoves = (size_t *) malloc(sizeof(size_t) * H); 
-
-  /* get minimum acres */
-  minAcres = NhAcres[0];
-  for( j = 0, minAcres = INFINITY;  j < H; j++)
-    if( NhAcres[j] < minAcres ) { 
-      minAcres = NhAcres[j];
-    }
-
-  /* keep generating candiate moves until you try N*H times, then give up */ 
-  l = 0;
-  k = 0;
-  while(k < 1) {
-
-    /* generate a canidate */ 
-    i = SA_GETINDEX(N);
-#ifdef DEBUG
-    printf("k=%zu : canidate i=%zu, N= %zu, test=%f\n", k,i,N, runif(0.0,1.0)  );
-#endif
-    Hi = I[i];
-    k = 0; /* number of places to move to */ 
-
-    /* if the change is going to be below the smallest number of acres  */
-    /* use the acres of the proposed change to check acreDif instead of minAcres */
-    if( NhAcres[Hi] - acres[i] < minAcres )  {
-      for( j = 0; j < H; j++) {
-        if(Hi == j) continue;
-        /* add to possible moves if the move does not violate acre difference */
-        if((1 - (minAcres - acres[i])/( NhAcres[j] + acres[i] )) < acreDif ) {
-          possibleMoves[k]=j;
-          k++;
-        }
-      }
-    } else {
-      for( j = 0; j < H; j++) {
-        if(Hi == j) continue;
-        /* add to possible moves if the move does not violate acre difference */
-        if((1 - minAcres/( NhAcres[j] + acres[i] )) < acreDif ) {
-          possibleMoves[k]=j;
-          k++;
-        }
-      }
-    }
-      
-
-    if( l > N * H ) {
-      #ifndef CLI
-      Rprintf("No Movement Likely Possible, Terminating\n");
-      #endif 
-      #ifdef CLI
-      printf("No Movement Likely Possible, Terminating\n");
-      #endif 
-      
-      return(N+1);
-    }
-    l++;
+  while ( j >= N ) {
+    /* generate possible move */
+    i = minCV_getIndex( prob, totalProbability );
+  
+    /* can I make a potential move neighbors */
+    j = minCV_getMoveNeighbor( i, I, prob, neighbors, nNeighbors, N);
   }
 
+  /* save j */
+  a->j = j;
 
-  /* add to our data structure our next move */ 
-#ifdef DEBUG
-  Rprintf("possibleMoves: Hi = %d\n", (int) Hi); 
-  for( l = 0; l < k; l++) Rprintf("posMov: %d\n",(int) possibleMoves[l]);
-#endif
-
-  Hj = possibleMoves[SA_GETINDEX(k)];
-#ifdef DEBUG
-  printf("Chosen Hj = %d\n", (int) Hj );
-#endif
-
-  a->j = L[Hj][ SA_GETINDEX( Nh[Hj] ) ];
-#ifdef DEBUG
-  printf("j = %d", (int) a->j); 
-#endif
-
-  free(possibleMoves);
-
+  /* return index */
   return(i);
 }
+
+
+/* function to select neighbor */
+/* if a neighbor cannot found it returns an integer > nNeighbors */
+size_t minCV_getMoveNeighbor( 
+    size_t i, 
+    size_t * I, 
+    double * prob, 
+    size_t * neighbors, 
+    size_t nNeighbors,
+    size_t N
+    ) {
+  size_t j;
+  size_t k = 0;
+  size_t Hi = I[i];
+  size_t currentNeighbor;
+  double totalProb = 0;
+  double total;
+
+  /* get the number of neighbors with different stratum membership */
+  for( j=0; j < nNeighbors; j++) { 
+
+    /* get the current neighbor of i */
+    currentNeighbor = neighbors[i*N*nNeighbors + j];
+
+    /* get the sum of the weight and number of neighbors not in the same strata as i */
+    if( I[ currentNeighbor ] != Hi ) {
+      k++;
+      totalProb += prob[currentNeighbor];
+    }
+
+  }
+
+  /* no neighbors in different strata, quit */
+  if( k == 0 ) return( N );   
+
+  /* randomly select the neighbor proportional to its sampling weight */
+  totalProb = runif(0,totalProb); 
+  total = 0;
+
+  /* find the neighbor that corresponds to the selected sampling weight */ 
+  for( j=0; j < nNeighbors; j++) { 
+    currentNeighbor = neighbors[i*N*nNeighbors + j];
+    total += prob[currentNeighbor];
+    if( total <= totalProb) break;  
+  }
+
+  return( currentNeighbor ) ;
+}
+
+
+
+/* function to select an index */
+size_t minCV_getIndex( double * prob, double totalProbability ) {
+
+  size_t index = 0;
+  double total = 0;
+  double searchProbability = runif(0,totalProbability); /* select a value uniform across the sum of probabilities */
+
+  while( total <= searchProbability ) {
+    total += prob[index];
+    index++;
+  }
+
+  return( index );
+}
+
+
+
 
 
 /* This is a function to check the change in substrata cost                   */
@@ -478,8 +396,7 @@ void minCV_update (
   /* update the strata assignment */
   I[i] = Hj;
   I[j] = Hi;
-
-
+  
   /* update L */
   l=0;
   while( L[Hi][l] != i ) l++;
@@ -613,47 +530,44 @@ void * minCV_packSubstrata(
   double * W;     /* Within Variance */
   double ** V;    /* Matrix of Variance, [Commodity][strata] */ 
   double * Total; /* Matrix of Totals, [Commodity]*/ 
+  size_t nNeighbors; /* number of neighbors */
 
-  size_t * size;  /* number of assumed segments in a psu */
-  double * acres; /* acres for each psu */
   double * sampleSize;
 
-  minCV_adminStructPtr packedStruct;
+  /* allocate struct */
+  minCV_adminStructPtr packedStruct =  
+    (minCV_adminStructPtr) malloc( sizeof( minCV_adminStruct ) ); 
+  
+  /* H is the number of labels */
+  H =  minCV_labelCount( I, N );
+  
 
   /* created to take care of the convert issue */ 
-  size          = (size_t * ) malloc(sizeof(size_t) * N );
-  acres          = (double * ) malloc(sizeof(size_t) * N );
+  size_t * size          = (size_t * ) malloc(sizeof(size_t) * N );
+  double * acres         = (double * ) malloc(sizeof(size_t) * N );
+  size_t * neighbors     = (size_t * ) malloc(sizeof(size_t) * N * aInt[N] );
+  double * prob          = (double * ) malloc(sizeof(double) * N );
+  double * probMatrix    = (double * ) malloc(sizeof(double) * N * H );
 
-  for( i=0; i < N; i++) 
-  {
+  for( i=0; i < N; i++) {
     size[i]  =  (size_t) aInt[i];
     acres[i] =           aDbl[i];
   } 
+ 
+  /* nNeighbor is the number of neighbors */
+  nNeighbors = (size_t) aInt[N];
+  packedStruct->nNeighbors = nNeighbors;
 
-  /* H is the number of labels */
-  H =  minCV_labelCount( I, N );
+  /* copy over neighbors */ 
+  for( i=0; i < nNeighbors * N; i++) 
+    neighbors[i] = (size_t) aInt[N + 1 + i];
+  packedStruct->neighbors = neighbors;
 
   /* Nh is the size of each label (vector) */
   Nh = minCV_labelTotalPSUs( I, N, H);
   
   /* NhSize is the total number of segments (vector) */
   NhSize = minCV_labelTotalSegments( I, N, H, size);
-
-#ifdef DEBUG
-  printf("\n Obs: %zu", N);
-  printf("\n Vars: %zu", dN);
-  printf("\n H: %zu",H); 
-
- printf("\nNhSize: ");
-  for( i = 0; i < H; i++)
-    printf(" %d ", (int) NhSize[i]);
-  printf("\n");
-  
-  for(i =0; i < NDbl; i++) 
-    Rprintf("%d: %f\n", (int) i, aDbl[i]);
-#endif
-
-
 
   /* NhSize is the total number of segments (vector) */
   NhAcres = minCV_labelTotalAcres( I, N, H, acres);
@@ -691,11 +605,19 @@ void * minCV_packSubstrata(
   sampleSize = (double *) malloc( sizeof( double ) * H );
   for( i =0; i < H; i++) 
     sampleSize[i] = aDbl[N + 3*dN + i]; 
+ 
+  /* get max prob */ 
+  for( i =0; i < N; i++) 
+    prob[i] = aDbl[N + 3*dN + H + i]; 
+  packedStruct->prob = prob;
 
+  /* get prob matrix */
+  for( i =0; i < N*H; i++) 
+    probMatrix[i] = aDbl[2*N + 3*dN + H + i]; 
+  packedStruct->probMatrix = probMatrix;
   
-  /* allocate struct */
-  packedStruct = 
-    (minCV_adminStructPtr) malloc( sizeof( minCV_adminStruct ) ); 
+  packedStruct->totalProbability = aDbl[(H + 2)*N + 3*dN + H]; 
+  
 
   /* make assignments to struct */
   packedStruct->H = H;
@@ -717,8 +639,6 @@ void * minCV_packSubstrata(
   packedStruct->acreDif = aDbl[NDbl-1 ];
   packedStruct->sampleSize = sampleSize;
   
-  printf("\nPacking\n Temp = %f Acre dif = %f", packedStruct->temp, packedStruct->acreDif);
-
   return( (void *) packedStruct );
 }
 
@@ -732,6 +652,15 @@ void minCV_deleteSubstrata( minCV_adminStructPtr  a, size_t dN, size_t N )
   /* first the vectors */
   free( a->Nh );
   a->Nh = NULL;
+  
+  free( a->neighbors );
+  a->neighbors = NULL;
+  
+  free( a->prob );
+  a->prob = NULL;
+  
+  free( a->probMatrix );
+  a->probMatrix = NULL;
   
   free( a->NhSize );
   a->NhSize = NULL;

@@ -43,6 +43,11 @@ typedef struct
   double temp;  /* temp denominator for cooling function*/
   double * acres;   /* not used */
   double * NhAcres; /* not used */
+  double * prob;        /* vector of sampling weights */
+  double * probMatrix; /*  matrix of sampling weights , one weight for each stratum */
+  double totalProbability; /* current sum of total Probability */ 
+  size_t * neighbors; /* neighbors Matrix */
+  size_t nNeighbors; /* number of neighbors */
   size_t * size;
   size_t * NhSize;
   double acreDif;
@@ -169,6 +174,25 @@ double *** minCV_createContribMatrix( size_t * label, size_t dN, size_t N, size_
 
 /* function that creates a variance MDA (matrix) [commodity][strata] */
 double ** minCV_createVarMatrix( size_t * label, size_t dN, size_t N, size_t k, size_t H, double * x, size_t ** L, size_t * Nh, size_t * NhSize);
+
+/* function to get the possible number of moves under acreate constraints */
+size_t minCV_getPossibleMovesAcres(
+  size_t index,         /* index to move from */ 
+  size_t * I,           /* indexs of assignments */
+  size_t * possibleMoves,
+  size_t H,
+  double * acres,      /*  */
+  double acreDif,      /*  */
+  double * NhAcres,    /* Nh acres */
+  size_t ** L,         /* Stratum assignment H x N */
+  size_t * Nh         /* strata PSU count */
+); 
+
+/* function to select an index */
+size_t minCV_getIndex( double * prob, double totalProbability ); 
  
+/* function to select neighbor */
+/* if a neighbor cannot found it returns an integer > nNeighbors */
+size_t minCV_getMoveNeighbor( size_t i, size_t * I, double * prob, size_t * neighbors, size_t nNeighbors, size_t N); 
 
 #endif
