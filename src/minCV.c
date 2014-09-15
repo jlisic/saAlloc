@@ -213,11 +213,16 @@ size_t minCV_getIndex( double * prob, double totalProbability ) {
   double total = 0;
   double searchProbability = runif(0,totalProbability); /* select a value uniform across the sum of probabilities */
 
-  while( total <= searchProbability ) {
-    total += prob[index];
-    index++;
-  }
+  for( total = prob[0]; total <=searchProbability; total += prob[index], index++){
+  Rprintf("\nminCV_getIndex:  index = %d, total = %f, totalProbability = %f, target = %f\n", 
+      (int) index, 
+      total, 
+      totalProbability,
+      searchProbability);
+        
+  };
 
+  Rprintf("\nsolution:\n");
   Rprintf("\nminCV_getIndex:  index = %d, total = %f, totalProbability = %f, target = %f\n", 
       (int) index, 
       total, 
@@ -400,7 +405,11 @@ void minCV_update (
   size_t     j = a->j;
   size_t **  L = a->L;
   size_t     k = a->k;
+  size_t     H = a->H;
   double *   x = a->x;
+  double * prob = a->prob;
+  double * probMatrix = a->probMatrix;
+  double totalProbability = a->totalProbability;
 
   /* figure out change in cost */
   Hi = I[i];
@@ -409,6 +418,16 @@ void minCV_update (
   /* update the strata assignment */
   I[i] = Hj;
   I[j] = Hi;
+
+  /* update prob */
+
+  totalProbability = totalProbability - prob[i] - prob[j];
+
+  prob[i] = 1 - probMatrix[ H * i + I[i] ];
+  prob[j] = 1 - probMatrix[ H * j + I[j] ];
+
+  /* update total prob */
+  a->totalProbability = totalProbability + prob[i] + prob[j];
   
   /* update L */
   l=0;

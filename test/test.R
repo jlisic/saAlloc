@@ -6,6 +6,27 @@ set.seed(400)
 
 x <- matrix(1:16,ncol=4)
 
+prob <- c(
+           .95, .05,
+           .95, .05,
+           .95, .05,
+           .95, .05,
+           .95, .05,
+           .95, .05,
+           .95, .05,
+           .95, .05,
+           .05, .95,
+           .05, .95,
+           .05, .95,
+           .05, .95,
+           .05, .95,
+           .05, .95,
+           .05, .95,
+           .05, .95
+           )
+
+prob <- matrix(prob,ncol=2,byrow=T)
+
 
 label <- c(
            0,
@@ -72,10 +93,11 @@ targetCV <- c(.01,.01,.01)
 b <- saMinCV(
 x,
 label,
-iter=2,
+iter=4,
 cooling=0,
 targetCV=targetCV,
 sampleSize=8
+, prob=prob
 )
 
 # compare results
@@ -87,44 +109,5 @@ print( sqrt(targetCV) )
 
 print("Min CV")
 print( 2*sqrt(colSums(aggregate(x,by=list(b$label),var))[-1]) / colSums(x) )
-
-
-
-
-############ rnorm ##############
-
-x <- rbind( 
-       matrix( rnorm(8 * 3), nrow=8),
-       matrix( rnorm(8 * 3), nrow=8) + 3  
-     )
-
-
-
-#target variance
-targetCV <- c(.01,.01,.01)
-
-# run minCV
-b <- saMinCV(
-x,
-label,
-iter=2000,
-cooling=0,
-targetCV=targetCV,
-sampleSize=8
-)
-
-# compare results
-print("before CV")
-print( 2*sqrt(colSums( aggregate(x,by=list(label),var))[-1]) / colSums(x) )
-
-print("Target")
-print( sqrt(targetCV) )
-
-print("Min CV")
-print( 2*sqrt(colSums(aggregate(x,by=list(b$label),var))[-1]) / colSums(x) )
-
-
-
-
 
 

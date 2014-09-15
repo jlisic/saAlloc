@@ -4,7 +4,7 @@ function(
   label,
   targetCV,
   sampleSize,
-  prob,                  # missing handled
+  probMatrix,            # missing handled
   neighbors,             # missing handled
   nNeighbors,            # missing handled
   iterations=1000,
@@ -42,23 +42,23 @@ function(
   #################### PROBABILITY ######################################
  
   # get prob
-  if( missing(prob) ) {
-    prob <- matrix( 1/N, nrow=N, ncol=H)
+  if( missing(probMatrix) ) {
+    probMatrix <- matrix( 1/N, nrow=N, ncol=H)
   }
 
   # check prob
-  if(( nrow(prob) != N) | (ncol(prob) != H )) {
-    stop( sprintf("probability matrix (prob) does not have correct dimensions\n Needed (nrow = %d, ncol = %d), provided (nrow = %d, ncol = %d)\n",
-                 N, d, nrow(prob), ncol(prob) ) ) 
+  if(( nrow(probMatrix) != N) | (ncol(probMatrix) != H )) {
+    stop( sprintf("probMatrixability matrix (probMatrix) does not have correct dimensions\n Needed (nrow = %d, ncol = %d), provided (nrow = %d, ncol = %d)\n",
+                 N, d, nrow(probMatrix), ncol(probMatrix) ) ) 
   }
 
   # get max prob
-  maxProb <- apply(prob, 1, max) 
+  prob <- 1 - apply(cbind(label,probMatrix), 1, function(x) x[x[1]+2] ) 
 
-  totalProb <- sum(maxProb)
-
+  totalProb <- sum(prob)
+  print(sprintf("TotalProb = %f", totalProb))
   # create row major matrix for input to C program
-  prob <- c(t(prob))
+  probMatrix <- c(t(probMatrix))
 
 
   #################### NEIGHBORS ######################################
@@ -127,8 +127,8 @@ function(
     targetVarWithin, 
     total, 
     sampleSize, 
-    maxProb, 
     prob, 
+    probMatrix, 
     totalProb,
     cooling, 
     tolSize 

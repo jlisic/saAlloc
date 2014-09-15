@@ -65,12 +65,6 @@ double * sa(
   while( i < m ) 
   {
     if( i % 100 == 0) Rprintf("iter: %d\n",(int) i);
-    #ifndef CLI 
-    if( i % 1000 == 0) Rprintf("%d ",(int) i);
-    #endif 
-    #ifdef CLI
-    if( i % 1000 == 0) printf("%d ",(int) i);
-    #endif
 
     // 1. select a potential move t_{i+1} 
     newI = randomStateSAFunction( I, Q, J, R, D, A, dN, N);
