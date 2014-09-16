@@ -140,10 +140,6 @@ size_t minCV_randomState (
     /* can I make a potential move neighbors */
     j = minCV_getMoveNeighbor( i, I, prob, neighbors, nNeighbors, N);
 
-   printf("Selected:\n i = %d, Hi = %d\n j = %d\n Hj = %d\n", 
-       (int) i, (int) I[i], (int) j, (int) I[j] 
-       );
-
   }
 
   /* save j */
@@ -182,6 +178,7 @@ size_t minCV_getMoveNeighbor(
       k++;
       totalProb += prob[currentNeighbor];
     }
+  
 
   }
 
@@ -193,14 +190,20 @@ size_t minCV_getMoveNeighbor(
   total = 0;
 
   /* find the neighbor that corresponds to the selected sampling weight */ 
-  for( j=0; j < nNeighbors; j++) { 
+  for( j=0; j < nNeighbors; j++) {
+
+    /* get the first neighbor */
     currentNeighbor = neighbors[i*nNeighbors + j];
-    total += prob[currentNeighbor];
-    if( total <= totalProb) break;  
+    
+    /* if the neighbor is in a differest strata then add total */ 
+    if( I[ currentNeighbor ] != Hi ) {
+      total += prob[currentNeighbor];
+    }
+    
+
+    if( total >= totalProb) break;  
   }
   
-  Rprintf("\nminCV_getMoveNeighbor:  index = %d, total = %f, target = %f\n", (int) j, total, totalProb);
-
   return( currentNeighbor ) ;
 }
 
@@ -212,22 +215,13 @@ size_t minCV_getIndex( double * prob, double totalProbability ) {
   size_t index = 0;
   double total = 0;
   double searchProbability = runif(0,totalProbability); /* select a value uniform across the sum of probabilities */
+      
+  total = prob[0]; 
+  while( total < searchProbability ){ 
+      index++;
+      total += prob[index];
+  }
 
-  for( total = prob[0]; total <=searchProbability; total += prob[index], index++){
-  Rprintf("\nminCV_getIndex:  index = %d, total = %f, totalProbability = %f, target = %f\n", 
-      (int) index, 
-      total, 
-      totalProbability,
-      searchProbability);
-        
-  };
-
-  Rprintf("\nsolution:\n");
-  Rprintf("\nminCV_getIndex:  index = %d, total = %f, totalProbability = %f, target = %f\n", 
-      (int) index, 
-      total, 
-      totalProbability,
-      searchProbability);
 
   return( index );
 }
@@ -796,6 +790,7 @@ void minCV_diag(
   Rprintf("%d:  %f\n",(int) dN, Q[dN]); 
   
   /* neighbors */ 
+  /*
   Rprintf("\nneighbors\n");
   for( d =0; d < N; d++) {
     Rprintf("%d:  ",(int) d);
@@ -805,8 +800,10 @@ void minCV_diag(
 
     Rprintf("\n");
   } 
+  */
   
   /* probMatrix */ 
+  /*
   Rprintf("\nprobMatrix\n");
   for( d =0; d < N; d++) {
     Rprintf("%d:  ",(int) d);
@@ -816,12 +813,13 @@ void minCV_diag(
     
     Rprintf("\n");
   } 
- 
+  */ 
   /* prob */ 
+  /*
   Rprintf("\nprob\n");
   for( d =0; d < N; d++) 
     Rprintf("%d:  %f\n",(int) d,  prob[d]); 
-  
+   */ 
   
   Rprintf("\nNh\n");
   for( d =0; d < H; d++) 

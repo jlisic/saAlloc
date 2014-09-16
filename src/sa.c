@@ -80,9 +80,9 @@ double * sa(
     costChange[i*3+2] = 0;
 
 
-//#ifdef DEBUG3 
+#ifdef DEBUG3 
     Rprintf("\ndelta=%f,", newCostChange);
-//#endif
+#endif
 
 #ifdef DEBUG2 
     Rprintf("\n****************** post cost change  ****************\n");
@@ -145,10 +145,10 @@ double * sa(
 
     }
 
-//#ifdef DEBUG  
+#ifdef DEBUG  
   printf("\n************************* i = %d **************************\n",(int) i);
   for( size_t ii=0; ii < N; ii++) printf("\n I[%d]: %d", (int) ii, (int) I[ii] ); 
-//#endif
+#endif
 
 
     /* 6. ommitted, it is implemented as the while loop */ 
@@ -157,13 +157,11 @@ double * sa(
   Rprintf("\n");
 #endif
 
+//  diagFunction(i,I,Q,A,dN,N);
 
     i++; 
   } 
   
-#ifndef DEBUG
-  diagFunction(i,I,Q,A,dN,N);
-#endif
 
 #ifndef CLI
   PutRNGstate();
