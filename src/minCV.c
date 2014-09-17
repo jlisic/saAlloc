@@ -150,6 +150,7 @@ size_t minCV_randomState (
 }
 
 
+
 /* function to select neighbor */
 /* if a neighbor cannot found it returns an integer > nNeighbors */
 size_t minCV_getMoveNeighbor( 
@@ -178,7 +179,6 @@ size_t minCV_getMoveNeighbor(
       k++;
       totalProb += prob[currentNeighbor];
     }
-  
 
   }
 
@@ -221,7 +221,6 @@ size_t minCV_getIndex( double * prob, double totalProbability ) {
       index++;
       total += prob[index];
   }
-
 
   return( index );
 }
@@ -339,19 +338,30 @@ double minCV_costChange (
         ( (NhSizeHj - 1) * (nhSizeHj) ) * NhSizeHj 
         + 
         (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] + C[d][j][Hi] -dij ) / 
-        ( (NhSizeHi - 1) * (nhSizeHj) ) * NhSizeHj 
+        ( (NhSizeHi - 1) * (nhSizeHi) ) * NhSizeHi 
       ) / Total[d] - T[d];
 
-//  printf("R[d] = %f, R[d] - Q[d] = %f \n", R[d], R[d] - Q[d]);
+    
+    //Rprintf("%d: R[d]+T[d]=%f, Q[d]+T[d]=%f, R[d]=%f, Q[d]=%f, R[d]-Q[d]=%12.8f \n", (int) d, R[d] + T[d], Q[d] + T[d], -1 * R[d] + Q[d] );
+
+    /*
+    if( R[d] - Q[d] == 0 ) printf("R[d] - Q[d] == 0\n");
+    if( R[d] - Q[d] < 0 )  printf("R[d] - Q[d] < 0\n");
+    if( R[d] - Q[d] > 0 )  printf("R[d] - Q[d] > 0\n");
+    */
 
     /* get the max change in CV */
-    if( R[d] > 0 ) 
-      if( R[d] - Q[d] > 0 ) delta++;
+    if( R[d] > 0 ) { 
+      if( R[d] - Q[d] > 0 ) {
+        delta++;
+      }
+    }
    
 //    printf("R-Q[%zu] =%f\n",d, R[d] - Q[d] );  
 
   }
- 
+
+
   return(delta);
 }
 

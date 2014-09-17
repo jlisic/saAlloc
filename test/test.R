@@ -111,23 +111,26 @@ print("Min CV")
 print( 2*sqrt(colSums(aggregate(x,by=list(b$label),var))[-1]) / colSums(x) )
 
 
+nHigh   <- 10
+nMed    <- 5 
+nLow <- 15
 
 # high density cultivation, few farms
 highCult <- cbind( 
-                rnorm(300, 500, 80),
-                rlnorm(300, 1,.3)
+                rnorm(nHigh, 500, 80),
+                rlnorm(nHigh, 1,.3)
               )
 
 # medium density cultivation
 mediumCult <- cbind( 
-                rnorm(100,200,100),
-                rlnorm(100,1.5,.3)
+                rnorm(nMed,200,100),
+                rlnorm(nMed,1.5,.3)
               )
 
 # low density cultivation, many farms and non-farms 
 lowCult <- cbind( 
-             rnorm( 600,10,40),
-             rlnorm( 600,2)
+             rnorm( nLow,10,40),
+             rlnorm( nLow,2)
            )
                
 
@@ -144,7 +147,7 @@ lowCult[lowCult[,2] > 40 ,2] <- 40
 x <- rbind( highCult, mediumCult, lowCult)
 
 # targetCV
-targetCV <- c(.04,.05)
+targetCV <- c(.05,1)
 
 # label
 kMean <- kmeans(scale(x),3)
@@ -155,7 +158,7 @@ label <- kMean$cluster
 library(Rsolnp)
 
 # initial Allocation 
-y <- c(30,30,30) 
+y <- c(5,5,5) 
 
 # items Needed for allocation 
 N     <- aggregate(label,by=list(label),length)[-1]
@@ -197,11 +200,11 @@ prob <- prob/rowSums(prob)
 b <- saMinCV(
 x,
 label-1,
-iter=1,
+iter=30,
 cooling=0,
 targetCV=targetCV,
-sampleSize=nOpt , 
-prob=prob
+sampleSize=nOpt  
+#,prob=prob
 )
 
 # compare results
@@ -213,4 +216,12 @@ print( targetCV )
 
 print("Min CV")
 print( sqrt(colSums( aggregate(x,by=list(b$label),var)* N^2/nOpt)[-1]) / colSums(x) )
+
+
+par(mfrow=c(1,2))
+
+plot( x, col=label)
+plot( x, col=b$label+1)
+
+
 
