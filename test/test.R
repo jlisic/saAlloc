@@ -167,13 +167,13 @@ Total <- aggregate(x,by=list(label),sum)[-1]
 sampleSize <- sum(y)
 
 # constraint function
-constraintFunc <- function(y) return(sum(y) - sampleSize)
+constraintFunc <- function(y) return( (sum(y) - sampleSize)^2 )
 
 # objective function
 objFunc <- function(y){
-  a <- colSums(N^2 * S2 / y) - ( colSums(Total) * targetCV )^2
+  a <- colSums(S2 * N^2/y)/colSums(Total)^2  - targetCV^2
   v <- a * 1/(1+exp(-a))
-  return( sqrt( sum(v * v) ) + 10000*exp( constraintFunc(y) )  )
+  return( sum(v * v) + constraintFunc(y) )
 }
 
 
@@ -186,8 +186,10 @@ optSampleSize <- solnp(
   UB=rep(50,length(y)) 
   )  
 
+
 # adjust 
-nOpt <- ceiling(optSampleSize$par) 
+nOpt <- optSampleSize$pars 
+print(nOpt)
 
 
 # get prob
@@ -218,10 +220,10 @@ print("Min CV")
 print( sqrt(colSums( aggregate(x,by=list(b$label),var)* N^2/nOpt)[-1]) / colSums(x) )
 
 
-par(mfrow=c(1,2))
-
-plot( x, col=label)
-plot( x, col=b$label+1)
+#par(mfrow=c(1,2))
+#
+#plot( x, col=label)
+#plot( x, col=b$label+1)
 
 
 

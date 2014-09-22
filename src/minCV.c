@@ -342,26 +342,27 @@ double minCV_costChange (
       ) / Total[d] - T[d];
 
     
-    //Rprintf("%d: R[d]+T[d]=%f, Q[d]+T[d]=%f, R[d]=%f, Q[d]=%f, R[d]-Q[d]=%12.8f \n", (int) d, R[d] + T[d], Q[d] + T[d], -1 * R[d] + Q[d] );
-
-    /*
+/*
     if( R[d] - Q[d] == 0 ) printf("R[d] - Q[d] == 0\n");
     if( R[d] - Q[d] < 0 )  printf("R[d] - Q[d] < 0\n");
     if( R[d] - Q[d] > 0 )  printf("R[d] - Q[d] > 0\n");
-    */
-
+*/
     /* get the max change in CV */
     if( R[d] > 0 ) { 
       if( R[d] - Q[d] > 0 ) {
-        delta++;
+        delta=delta+1.0;
       }
-    }
+    } 
+    
+//    Rprintf("%d: delta=%f, T[d]=%2.20f, R[d]+T[d]=%2.20f, Q[d]+T[d]=%2.20f, R[d]=%2.20f\n    Q[d]=%2.20f, R[d]-Q[d]=%2.20f \n", 
+//        (int) d,delta, T[d], R[d] + T[d], Q[d] + T[d], R[d], Q[d], R[d] - Q[d]);
+
    
 //    printf("R-Q[%zu] =%f\n",d, R[d] - Q[d] );  
 
   }
 
-
+//  Rprintf("delta=%f\n",delta);
   return(delta);
 }
 
