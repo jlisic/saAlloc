@@ -37,8 +37,6 @@ void minCV_init (
   sampleSize = a->sampleSize;
 
 
-  /* value to get max Q */
-  Q[dN] = -INFINITY;
 
   /* Q has been allocated but there is nothing in it yet */
   for(i=0; i < dN; i++) {
@@ -47,8 +45,6 @@ void minCV_init (
       Q[i] += V[i][j] * NhSize[j]* NhSize[j]/( sampleSize[j] );
     }
     Q[i] = sqrt(Q[i]) / Total[i] - T[i];
-    
-    if( Q[i] > Q[dN] ) Q[dN] = Q[i];
   }
 
 
@@ -56,57 +52,6 @@ void minCV_init (
 
 
   
-/* function to get possible moves under acreage constraints */
-size_t minCV_getPossibleMovesAcres(
-  size_t index,         /* index to move from */ 
-  size_t * I,           /* indexs of assignments */
-  size_t * possibleMoves,
-  size_t H,
-  double * acres,      /*  */
-  double acreDif,      /*  */
-  double * NhAcres,    /* Nh acres */
-  size_t ** L,         /* Stratum assignment H x N */
-  size_t * Nh         /* strata PSU count */
-) {
-  
-  size_t  Hi, j;
-  size_t k = 0; /* number of moves */
-
-  double minAcres = NhAcres[0]; /* minimum acres for any stratum, initialize with the first Acres */
-  
-  /* get minimum acres */
-  for( j = 0, minAcres = INFINITY;  j < H; j++)
-    if( NhAcres[j] < minAcres ) minAcres = NhAcres[j];
-
-  /* generate a canidate */ 
-  Hi = I[index]; /* get stratum of canidate */
-
-  /* if the change is going to be below the smallest number of acres  */
-  /* use the acres of the proposed change to check acreDif instead of minAcres */
-  if( NhAcres[Hi] - acres[index] < minAcres )  {
-    for( j = 0; j < H; j++) {
-      if(Hi == j) continue;
-      /* add to possible moves if the move does not violate acre difference */
-      if((1 - (minAcres - acres[index])/( NhAcres[j] + acres[index] )) < acreDif ) {
-        possibleMoves[k]=j;
-        k++;
-      }
-    }
-  } else {
-    for( j = 0; j < H; j++) {
-      if(Hi == j) continue;
-      /* add to possible moves if the move does not violate acre difference */
-      if((1 - minAcres/( NhAcres[j] + acres[index] )) < acreDif ) {
-        possibleMoves[k]=j;
-        k++;
-      }
-    }
-  }
-      
-  return(k);
-}
-
-
 
 /* get a new random state */
 size_t minCV_randomState (
@@ -127,23 +72,42 @@ size_t minCV_randomState (
   /* cast A back to somethine useable */
   a = (minCV_adminStructPtr) A; 
   double * prob = a->prob;
-  size_t * neighbors = a->neighbors;
-  size_t nNeighbors = a->nNeighbors;
+  double * probMatrix = a->probMatrix;
+  double * sampleSize = a->sampleSize;
+  size_t * NhSize = a->NhSize;
   double totalProbability = a->totalProbability;
-  size_t i; 
-  size_t j = N;
+  size_t i =N+1;
+  size_t H = a->H;
+  size_t ** L = a->L;
+  size_t trys = 0;  /* number of times to try */
 
-  while ( j >= N ) {
+  while( i >= N ) {
+
     /* generate possible move */
     i = minCV_getIndex( prob, totalProbability );
   
-    /* can I make a potential move neighbors */
-    j = minCV_getMoveNeighbor( i, I, prob, neighbors, nNeighbors, N);
+     /* can I make a potential move neighbors */
+    if( sampleSize[ I[i] ] < NhSize[ I[i] ] ) {
+      
+      a->Hj = minCV_getMoveStrata( i, I, prob, probMatrix, N, H);
+  
+      if( a->Hj == N+1 ) i = N+1;
+  
+  
+    } else {
+      i = N+1;
+    }
 
+    /* fail on lack of matches */
+    if( trys >= 1000 ) {
+      Rprintf(" 1000 failures on finding a possible move, giving up\n"); 
+      break;
+    }
+
+    trys++;
   }
-
-  /* save j */
-  a->j = j;
+  
+  Rprintf("i = %d, Hi = %d, Hj = %d\n", (int) i, (int) I[i], (int) a->Hj );
 
   /* return index */
   return(i);
@@ -153,58 +117,42 @@ size_t minCV_randomState (
 
 /* function to select neighbor */
 /* if a neighbor cannot found it returns an integer > nNeighbors */
-size_t minCV_getMoveNeighbor( 
+size_t minCV_getMoveStrata( 
     size_t i, 
     size_t * I, 
     double * prob, 
-    size_t * neighbors, 
-    size_t nNeighbors,
-    size_t N
+    double * probMatrix,
+    size_t N,
+    size_t H
     ) {
-  size_t j;
+
   size_t k = 0;
   size_t Hi = I[i];
-  size_t currentNeighbor;
   double totalProb = 0;
   double total;
+  size_t Hj;
 
-  /* get the number of neighbors with different stratum membership */
-  for( j=0; j < nNeighbors; j++) { 
+  /* get the total weight of all the strata except Hi */
+  for( Hj=0; Hj < H; Hj++) 
+    if( Hj != Hi ) totalProb += probMatrix[i*H + Hj];
 
-    /* get the current neighbor of i */
-    currentNeighbor = neighbors[i*nNeighbors + j];
+  /* if the total probability remaininig is 0 quit */
+  if( totalProb == 0 ) return( N + 1 );   
 
-    /* get the sum of the weight and number of neighbors not in the same strata as i */
-    if( I[ currentNeighbor ] != Hi ) {
-      k++;
-      totalProb += prob[currentNeighbor];
-    }
-
-  }
-
-  /* no neighbors in different strata, quit */
-  if( k == 0 ) return( N );   
-
-  /* randomly select the neighbor proportional to its sampling weight */
+  /* randomly select the strata proportional to its weight */
   totalProb = runif(0,totalProb); 
   total = 0;
 
-  /* find the neighbor that corresponds to the selected sampling weight */ 
-  for( j=0; j < nNeighbors; j++) {
-
-    /* get the first neighbor */
-    currentNeighbor = neighbors[i*nNeighbors + j];
+  /* find the strata that corresponds to the selected sampling weight */ 
+  for( Hj=0; Hj < H; Hj++) {
     
-    /* if the neighbor is in a differest strata then add total */ 
-    if( I[ currentNeighbor ] != Hi ) {
-      total += prob[currentNeighbor];
-    }
-    
+    /* if the strata is in a different from i's strata then add total */ 
+    if( Hj != Hi ) total += probMatrix[i*H + Hj];
 
     if( total >= totalProb) break;  
   }
   
-  return( currentNeighbor ) ;
+  return( Hj ) ;
 }
 
 
@@ -257,19 +205,18 @@ double minCV_costChange (
   double * Total = a->Total;
   size_t k = a->k;                 /* size of an element within a commodity */
   double * x = a->x;               /* the data */
-  size_t j = a->j;                 /* get our chosen strata */
+  size_t Hj = a->Hj;               /* get our chosen strata */
   double * sampleSize = a->sampleSize;
   double delta = 0;
   double dij;
   size_t h;
   double  fixedVar;
-  size_t  Hi, Hj, d; 
+  size_t  Hi, d; 
 
   double NhSizeHj, NhSizeHi, nhSizeHi, nhSizeHj;
 
   /* figure out change in cost */
   Hi = I[i]; 
-  Hj = I[j];
 
 #ifdef DEBUG
   printf("\n(i=%d, j = %d)\n", (int) i, (int) j);
@@ -296,7 +243,7 @@ double minCV_costChange (
 #endif
 
     
-   dij = getDistX(i,j,x,k,d,N,squaredEuclidianMeanDist); 
+//   dij = getDistX(i,j,x,k,d,N,squaredEuclidianMeanDist); 
 
     /* get the variance total for the otehr strata */
     fixedVar = 0;
@@ -308,58 +255,51 @@ double minCV_costChange (
     }
 
     /* proposed new population size for Hj */
-    NhSizeHj = (double) NhSize[Hj] + size[i] - size[j]; 
+    NhSizeHj = (double) NhSize[Hj] + size[i]; 
 
     /* proposed new population size for Hi */
-    NhSizeHi = (double) NhSize[Hi] + size[j] - size[i]; 
+    NhSizeHi = (double) NhSize[Hi] - size[i]; 
 
     /* proposed new sample size for Hj */
-    nhSizeHj = (double) sampleSize[Hj] + size[i] - size[j]; 
+    nhSizeHj = (double) sampleSize[Hj];// + size[i]; 
 
     /* proposed new sample size for Hi */
-    nhSizeHi = (double) sampleSize[Hi] + size[j] - size[i]; 
+    nhSizeHi = (double) sampleSize[Hi];// - size[i]; 
 
-/*
+
     printf("Proposed Var[%d][%d] = %f\n", (int) d, (int) Hj,  
-        (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] - C[d][j][Hj] - dij )  /
-         ( (NhSizeHj - 1) * NhSizeHj ) 
+        (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] ) / 
+        ((NhSizeHj - 1) * NhSizeHj ) 
         ); 
     
     printf("Proposed Var[%d][%d] = %f\n", (int) d, (int) Hi,  
-        (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] + C[d][j][Hi] -dij ) /
-        ( (NhSizeHi - 1) * NhSizeHj )
+        (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] ) / 
+        ((NhSizeHi - 1)  * NhSizeHi) 
         );
-*/
+
 
     /* get the distance between */
     R[d] =
       sqrt( fixedVar + 
-        (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] - C[d][j][Hj] - dij ) / 
+        (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] ) / 
         ( (NhSizeHj - 1) * (nhSizeHj) ) * NhSizeHj 
         + 
-        (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] + C[d][j][Hi] -dij ) / 
+        (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] ) / 
         ( (NhSizeHi - 1) * (nhSizeHi) ) * NhSizeHi 
       ) / Total[d] - T[d];
 
     
-/*
+    Rprintf("d:\tR[d] = %f, Q[d] = %f, R[d]+T[d]=%f, Q[d]+T[d]=%f\n", (int) d,R[d], Q[d], R[d] + T[d], Q[d]+T[d]);
     if( R[d] - Q[d] == 0 ) printf("R[d] - Q[d] == 0\n");
     if( R[d] - Q[d] < 0 )  printf("R[d] - Q[d] < 0\n");
     if( R[d] - Q[d] > 0 )  printf("R[d] - Q[d] > 0\n");
-*/
+
     /* get the max change in CV */
     if( R[d] > 0 ) { 
       if( R[d] - Q[d] > 0 ) {
         delta=delta+1.0;
       }
     } 
-    
-//    Rprintf("%d: delta=%f, T[d]=%2.20f, R[d]+T[d]=%2.20f, Q[d]+T[d]=%2.20f, R[d]=%2.20f\n    Q[d]=%2.20f, R[d]-Q[d]=%2.20f \n", 
-//        (int) d,delta, T[d], R[d] + T[d], Q[d] + T[d], R[d], Q[d], R[d] - Q[d]);
-
-   
-//    printf("R-Q[%zu] =%f\n",d, R[d] - Q[d] );  
-
   }
 
 //  Rprintf("delta=%f\n",delta);
@@ -391,7 +331,7 @@ void minCV_update (
             size_t N    /* number of elements within a state */
             ) { 
   
-  size_t l, Hi, Hj, d; 
+  size_t l, Hi, d; 
   minCV_adminStructPtr a;
   double dil, djl, dij; 
 
@@ -403,11 +343,12 @@ void minCV_update (
   double **  V = a->V;
   //size_t *   Nh = a->Nh;
   double *   NhAcres = a->NhAcres;
+  size_t *   Nh = a->Nh;
   size_t *   NhSize = a->NhSize;
   size_t *   size = a->size;
   double *   acres = a->acres;
   double *   sampleSize = a->sampleSize;
-  size_t     j = a->j;
+  size_t     Hj = a->Hj;
   size_t **  L = a->L;
   size_t     k = a->k;
   size_t     H = a->H;
@@ -418,39 +359,30 @@ void minCV_update (
 
   /* figure out change in cost */
   Hi = I[i];
-  Hj = I[j]; 
   
   /* update the strata assignment */
   I[i] = Hj;
-  I[j] = Hi;
 
   /* update prob */
-
-  totalProbability = totalProbability - prob[i] - prob[j];
+  totalProbability = totalProbability - prob[i];
 
   prob[i] = 1 - probMatrix[ H * i + I[i] ];
-  prob[j] = 1 - probMatrix[ H * j + I[j] ];
 
   /* update total prob */
-  a->totalProbability = totalProbability + prob[i] + prob[j];
+  a->totalProbability = totalProbability + prob[i];
   
   /* update L */
+  /* need to rewrite this TODO, check terminal condition and dependencies on L*/
   l=0;
   while( L[Hi][l] != i ) l++;
-//  Rprintf("replace i = %d, L[Hi][l] = %d\n", (int) i, (int) L[Hi][l]); 
-  L[Hi][l] = j;
+  L[Hi][l] = N;
 
   l = 0;
-  while( L[Hj][l] != j ) l++;
-//  Rprintf("replace j = %d, L[Hi][l] = %d\n", (int) j, (int) L[Hj][l]); 
+  while( L[Hj][l] < N ) l++;
   L[Hj][l] = i;
-
-
-#ifdef DEBUG
-  printf(" Hi = %d, Hj = %d, i = %d, j = %d ",(int) Hi,(int) Hj, (int) i, (int) j); 
-  printf("\nUPDATING!!!\n");
-#endif
-  
+ 
+  /* if it is an end point, push back the end point */ 
+  if( L[Hj][l] == N+1 ) L[Hj][l+1] = N+1;  
 
 
   if(Hi == Hj) return; 
@@ -465,50 +397,43 @@ void minCV_update (
 
   /* renember to update NhSize and Size */
 
-  Q[dN]=R[dN]; 
 
   for( d=0; d < dN; d++) {
       
    Q[d] = R[d];
 
 
-   //dij = getDist(i,j,D,d,N); 
-   dij = getDistX(i,j,x,k,d,N,squaredEuclidianMeanDist); 
    /* update the variance, this must be done before C gets updated */
 
 
    V[d][Hj] = 
-        (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] - C[d][j][Hj] - dij) / ( (double)  (NhSize[Hj] + size[i] -size[j] - 1) *(NhSize[Hj] + size[i] -size[j] ) );
+        (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj]) / ( (double)  (NhSize[Hj] + size[i] - 1) * (NhSize[Hj] + size[i] ) );
 
     V[d][Hi] = 
-        (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] + C[d][j][Hi] - dij) / ( (double)  (NhSize[Hi] + size[j] -size[i] - 1) * (NhSize[Hi] + size[j] -size[i] ) ); 
+        (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi]) / ( (double)  (NhSize[Hi] - size[i] - 1) * (NhSize[Hi] - size[i] ) ); 
 
 
 
    for( l = 0; l < N; l++) {
-     //dil = getDist(i,l,D,d,N); 
-     //djl = getDist(j,l,D,d,N);
      dil = getDistX(i,l,x,k,d,N,squaredEuclidianMeanDist); 
-     djl = getDistX(j,l,x,k,d,N,squaredEuclidianMeanDist); 
     
 
-     /* Hj is j's old index */
+     /* Hj is i's new index */
      C[d][l][Hj] =  C[d][l][Hj] + dil; 
      C[d][l][Hi] =  C[d][l][Hi] - dil;  
-     
-     C[d][l][Hi] =  C[d][l][Hi] + djl; 
-     C[d][l][Hj] =  C[d][l][Hj] - djl;  
     }
   }
 
-  NhSize[Hi] += (size[j] - size[i]) ;
-  NhSize[Hj] += (size[i] - size[j]) ;
+  Nh[Hi]--;
+  Nh[Hj]++;
 
-  NhAcres[Hi] += (acres[j] - acres[i]);
-  NhAcres[Hj] += (acres[i] - acres[j]);
+  NhSize[Hi] -= size[i];
+  NhSize[Hj] += size[i];
+
+  NhAcres[Hi] -= acres[i];
+  NhAcres[Hj] += acres[i];
   
-  sampleSize[Hi] += (size[j] - size[i]) ;
-  sampleSize[Hj] += (size[i] - size[j]) ;
+  return;
 }
 
 
@@ -613,7 +538,8 @@ void * minCV_packSubstrata(
   NhMax = 2 * minCV_arrayMaxSize_t( Nh, H );
 
   /* creates a matrix of indexes with rows substrata, and colunns indexes */ 
-  L = minCV_labelCreateMaster( I, N, H, NhMax); 
+  //L = minCV_labelCreateMaster( I, N, H, NhMax); 
+  L = minCV_labelCreateMaster( I, N, H, N+1); 
 
   /* creates a matrix of differences between item i, and all the points in a 
    * stratum h.  Rows are items, and columns are strata.
@@ -797,8 +723,6 @@ void minCV_diag(
   Rprintf("sqrt(n) * CV_j - TCV_j\n");
   for( d =0; d < dN; d++) 
     Rprintf("%d:  %f\n",(int) d, Q[d]); 
-  Rprintf("max{ sqrt(n) * CV_j - TCV_j }\n");
-  Rprintf("%d:  %f\n",(int) dN, Q[dN]); 
   
   /* neighbors */ 
   /*
@@ -1012,7 +936,6 @@ size_t ** minCV_labelCreateMaster( size_t * label, size_t N, size_t H, size_t Nh
 
   /* assign each item to index */
   for(i = 0; i < N; i++) {
-
     j = 0;
     a = label[i];
     while(L[a][j] != N+1) j=j+1;

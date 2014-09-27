@@ -1,6 +1,6 @@
 library(saAlloc)
 
-set.seed(400)
+set.seed(200)
 
 # data set with 100 observations and 4 characteristics split between two strata
 
@@ -96,8 +96,8 @@ label,
 iter=92,
 cooling=0,
 targetCV=targetCV,
-sampleSize=8
-, prob=prob
+sampleSize=8, 
+prob=prob
 )
 
 # compare results
@@ -109,6 +109,7 @@ print( sqrt(targetCV) )
 
 print("Min CV")
 print( 2*sqrt(colSums(aggregate(x,by=list(b$label),var))[-1]) / colSums(x) )
+
 
 
 nHigh   <- 10
@@ -155,40 +156,43 @@ kMean <- kmeans(scale(x),3)
 label <- kMean$cluster
 
 # find optimal sample size
-library(Rsolnp)
+#library(Rsolnp)
 
-# initial Allocation 
-y <- c(5,5,5) 
+## initial Allocation 
+y <- c(3,3,3) 
+y <- apply( cbind( c(table(label)), y), 1, min) 
 
-# items Needed for allocation 
+
+## items Needed for allocation 
 N     <- aggregate(label,by=list(label),length)[-1]
 S2    <- aggregate(x,by=list(label),var)[-1]
 Total <- aggregate(x,by=list(label),sum)[-1]
 sampleSize <- sum(y)
-
-# constraint function
-constraintFunc <- function(y) return( (sum(y) - sampleSize)^2 )
-
-# objective function
-objFunc <- function(y){
-  a <- colSums(S2 * N^2/y)/colSums(Total)^2  - targetCV^2
-  v <- a * 1/(1+exp(-a))
-  return( sum(v * v) + constraintFunc(y) )
-}
-
-
-# get optimal sample size
-optSampleSize <- solnp( 
-  y,
-  fun=objFunc, 
-#  eqfun=constraintFunc, 
-  LB=rep(2,length(y)),
-  UB=rep(50,length(y)) 
-  )  
-
-
-# adjust 
-nOpt <- optSampleSize$pars 
+#
+### constraint function
+##constraintFunc <- function(y) return( (sum(y) - sampleSize)^2 )
+##
+### objective function
+##objFunc <- function(y){
+##  a <- colSums(S2 * N^2/y)/colSums(Total)^2  - targetCV^2
+##  v <- a * 1/(1+exp(-a))
+##  return( sum(v * v) + constraintFunc(y) )
+##}
+##
+##
+### get optimal sample size
+##optSampleSize <- solnp( 
+##  y,
+##  fun=objFunc, 
+###  eqfun=constraintFunc, 
+##  LB=rep(2,length(y)),
+##  UB=rep(50,length(y)) 
+##  )  
+#
+#
+## adjust 
+##nOpt <- optSampleSize$pars 
+nOpt <- y 
 print(nOpt)
 
 
@@ -202,7 +206,7 @@ prob <- prob/rowSums(prob)
 b <- saMinCV(
 x,
 label-1,
-iter=30,
+iter=1000,
 cooling=0,
 targetCV=targetCV,
 sampleSize=nOpt  
@@ -217,13 +221,14 @@ print("Target")
 print( targetCV )
 
 print("Min CV")
-print( sqrt(colSums( aggregate(x,by=list(b$label),var)* N^2/nOpt)[-1]) / colSums(x) )
+N.minCV <- c(table(b$label))
+print( sqrt(colSums( aggregate(x,by=list(b$label),var)* N.minCV^2/nOpt)[-1]) / colSums(x) )
 
 
-#par(mfrow=c(1,2))
-#
-#plot( x, col=label)
-#plot( x, col=b$label+1)
+par(mfrow=c(1,2))
+
+plot( x, col=label)
+plot( x, col=b$label+1)
 
 
 

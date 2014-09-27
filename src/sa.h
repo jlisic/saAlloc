@@ -12,22 +12,17 @@
 #include <assert.h>
 #include <math.h>
 
-#ifdef CLI
-#define MATHLIB_STANDALONE /* set for stand alone R.h, R from C  */
-#endif
 #include "R.h"
 #include "Rmath.h"
 #include "dist.h"
 
 /*** functional defines ***/
 
-#ifndef CLI
 #define SA_GETINDEX(x) (size_t) ( runif(0.0,1.0) * (double) (x) ) 
-#endif
 
-#ifdef CLI
-#define SA_GETINDEX(x) (size_t) ( rand() % (x) ) 
-#endif
+#define SA_GETINDEX_DOUBLE(x) ( runif(0.0,1.0) * (double) (x) ) 
+
+
 
 /*** typedefs  ***/
 /* initialize sa function                                                     */

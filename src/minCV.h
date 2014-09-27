@@ -27,7 +27,7 @@
 /* define an administrative data type */
 typedef struct 
 {
-  size_t j;     /* index to share second randomly selected var */
+  size_t Hj;     /* index to share second randomly selected var */
   size_t H;     /* Number of strata */
   size_t k;       /* the size of an element of x                   */
   size_t NhMax; /* max stratum size*/
@@ -175,24 +175,11 @@ double *** minCV_createContribMatrix( size_t * label, size_t dN, size_t N, size_
 /* function that creates a variance MDA (matrix) [commodity][strata] */
 double ** minCV_createVarMatrix( size_t * label, size_t dN, size_t N, size_t k, size_t H, double * x, size_t ** L, size_t * Nh, size_t * NhSize);
 
-/* function to get the possible number of moves under acreate constraints */
-size_t minCV_getPossibleMovesAcres(
-  size_t index,         /* index to move from */ 
-  size_t * I,           /* indexs of assignments */
-  size_t * possibleMoves,
-  size_t H,
-  double * acres,      /*  */
-  double acreDif,      /*  */
-  double * NhAcres,    /* Nh acres */
-  size_t ** L,         /* Stratum assignment H x N */
-  size_t * Nh         /* strata PSU count */
-); 
-
 /* function to select an index */
 size_t minCV_getIndex( double * prob, double totalProbability ); 
  
 /* function to select neighbor */
 /* if a neighbor cannot found it returns an integer > nNeighbors */
-size_t minCV_getMoveNeighbor( size_t i, size_t * I, double * prob, size_t * neighbors, size_t nNeighbors, size_t N); 
+size_t minCV_getMoveStrata( size_t i, size_t * I, double * prob, double * probMatrix, size_t N, size_t H); 
 
 #endif
