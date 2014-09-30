@@ -68,7 +68,6 @@ double * sa(
 
     // 1. select a potential move t_{i+1} 
     newI = randomStateSAFunction( I, Q, J, R, D, A, dN, N);
-    Rprintf("hi\n");
 
 
     /* if there are no possible movements we terminate */
@@ -80,9 +79,9 @@ double * sa(
     costChange[i*3+2] = 0;
 
 
-//#ifdef DEBUG3 
+#ifdef DEBUG3 
     Rprintf("\ndelta=%f,", newCostChange);
-//#endif
+#endif
 
 #ifdef DEBUG2 
     Rprintf("\n****************** post cost change  ****************\n");
@@ -157,7 +156,7 @@ double * sa(
   Rprintf("\n");
 #endif
 
-  diagFunction(i,I,Q,A,dN,N);
+//  diagFunction(i,I,Q,A,dN,N);
 
     i++; 
   } 

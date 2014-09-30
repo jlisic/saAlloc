@@ -5,8 +5,6 @@ function(
   targetCV,
   sampleSize,
   probMatrix,            # missing handled
-  neighbors,             # missing handled
-  nNeighbors,            # missing handled
   iterations=1000,
   cooling=0,
   segments=rep(1,nrow(x)),
@@ -15,8 +13,6 @@ function(
   tolSize=1
   ) {
 
-  # dependency on Fast Nearest Neighbors
-  require(FNN)
 
   # check if X is a matrix
   if( !is.matrix(x) ) {
@@ -61,51 +57,6 @@ function(
   probMatrix <- c(t(probMatrix))
 
 
-  #################### NEIGHBORS ######################################
- 
-  # get neighbors if they are missing 
-  if( missing(neighbors) ) {
- 
-    # if the number of neighbors is missign obtain it here 
-    if( missing(nNeighbors) ) nNeighbors = min( 10, N ) 
-
-    # approximate the nearest neighbors
-    neighbors <- knnx.index(x, x, k=nNeighbors+1)  
-    
-    # get neighbors and correct for C indexing
-    neighbors <- c( 
-      sapply( 
-        1:N, 
-        function(x) { 
-          z <- neighbors[x,] 
-          z[ z != x][1:(length(z) - 1)] 
-        } ) 
-      ) - 1  # minus one here to adjust for 0 indexes in C
-  } else {
-    
-    # if the number of neighbors is missign obtain it here 
-    if( missing(nNeighbors) ) nNeighbors = ncol(neighbors) 
-
-    # if neighbors are not missing make sure they are 'correct' 
-    if(( nrow(neighbors) != N) | (ncol(neighbors) != nNeighbors )) {
-      stop( sprintf("neighbors matrix (neighbors) does not have correct dimensions\n Needed (nrow = %d, ncol = %d), provided (nrow = %d, ncol = %d)\n",
-                 N, nNeighbors, nrow(neighbors), ncol(neighbors) ) ) 
-    }
-
-    # check if neighbors are too big
-    if( max(neighbors) > N ) stop( sprintf("max neighbor %d exceeds N = %d", max(neighbors), N) ) 
-
-    # check if neighbors are too small
-    if( min(neighbors) < 1 ) stop( sprintf("min neighbor %d is less than N = %d", max(neighbors), N) ) 
-
-    # check neighbors for integers
-    if( sum(!is.integer(neighbors) ) ) stop( "Some neighbors are not integers")
-
-    # correct for C indexing, and transpose to make the matrix row major
-    neighbors <- c(t(neighbors)) - 1
-  }
-
-
   #################### TOTALS ######################################
 
   # get total 
@@ -134,7 +85,7 @@ function(
     tolSize 
   )
   adminDblLength <- length( adminDbl )
-  adminInt <- c(segments, nNeighbors, neighbors) 
+  adminInt <- c(segments) 
   adminIntLength <- length( adminInt )
 
   dup <- c() 

@@ -46,8 +46,6 @@ typedef struct
   double * prob;        /* vector of sampling weights */
   double * probMatrix; /*  matrix of sampling weights , one weight for each stratum */
   double totalProbability; /* current sum of total Probability */ 
-  size_t * neighbors; /* neighbors Matrix */
-  size_t nNeighbors; /* number of neighbors */
   size_t * size;
   size_t * NhSize;
   double acreDif;
@@ -178,8 +176,7 @@ double ** minCV_createVarMatrix( size_t * label, size_t dN, size_t N, size_t k, 
 /* function to select an index */
 size_t minCV_getIndex( double * prob, double totalProbability ); 
  
-/* function to select neighbor */
-/* if a neighbor cannot found it returns an integer > nNeighbors */
+/* function to select what strata a selected unit moved to */
 size_t minCV_getMoveStrata( size_t i, size_t * I, double * prob, double * probMatrix, size_t N, size_t H); 
 
 #endif

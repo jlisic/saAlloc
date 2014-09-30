@@ -85,8 +85,8 @@ size_t minCV_randomState (
 
     /* generate possible move */
     i = minCV_getIndex( prob, totalProbability );
-  
-     /* can I make a potential move neighbors */
+ 
+    /* check if there are units that I can move */ 
     if( sampleSize[ I[i] ] < NhSize[ I[i] ] ) {
       
       a->Hj = minCV_getMoveStrata( i, I, prob, probMatrix, N, H);
@@ -107,16 +107,14 @@ size_t minCV_randomState (
     trys++;
   }
   
-  Rprintf("i = %d, Hi = %d, Hj = %d\n", (int) i, (int) I[i], (int) a->Hj );
+//  Rprintf("i = %d, Hi = %d, Hj = %d\n", (int) i, (int) I[i], (int) a->Hj );
 
   /* return index */
   return(i);
 }
 
 
-
-/* function to select neighbor */
-/* if a neighbor cannot found it returns an integer > nNeighbors */
+/* get a strata for i to move to */
 size_t minCV_getMoveStrata( 
     size_t i, 
     size_t * I, 
@@ -266,7 +264,7 @@ double minCV_costChange (
     /* proposed new sample size for Hi */
     nhSizeHi = (double) sampleSize[Hi];// - size[i]; 
 
-
+/*
     printf("Proposed Var[%d][%d] = %f\n", (int) d, (int) Hj,  
         (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] ) / 
         ((NhSizeHj - 1) * NhSizeHj ) 
@@ -276,7 +274,7 @@ double minCV_costChange (
         (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] ) / 
         ((NhSizeHi - 1)  * NhSizeHi) 
         );
-
+*/
 
     /* get the distance between */
     R[d] =
@@ -288,12 +286,12 @@ double minCV_costChange (
         ( (NhSizeHi - 1) * (nhSizeHi) ) * NhSizeHi 
       ) / Total[d] - T[d];
 
-    
+/*    
     Rprintf("d:\tR[d] = %f, Q[d] = %f, R[d]+T[d]=%f, Q[d]+T[d]=%f\n", (int) d,R[d], Q[d], R[d] + T[d], Q[d]+T[d]);
     if( R[d] - Q[d] == 0 ) printf("R[d] - Q[d] == 0\n");
     if( R[d] - Q[d] < 0 )  printf("R[d] - Q[d] < 0\n");
     if( R[d] - Q[d] > 0 )  printf("R[d] - Q[d] > 0\n");
-
+*/
     /* get the max change in CV */
     if( R[d] > 0 ) { 
       if( R[d] - Q[d] > 0 ) {
@@ -492,7 +490,6 @@ void * minCV_packSubstrata(
   double * W;     /* Within Variance */
   double ** V;    /* Matrix of Variance, [Commodity][strata] */ 
   double * Total; /* Matrix of Totals, [Commodity]*/ 
-  size_t nNeighbors; /* number of neighbors */
 
   double * sampleSize;
 
@@ -507,7 +504,6 @@ void * minCV_packSubstrata(
   /* created to take care of the convert issue */ 
   size_t * size          = (size_t * ) malloc(sizeof(size_t) * N );
   double * acres         = (double * ) malloc(sizeof(size_t) * N );
-  size_t * neighbors     = (size_t * ) malloc(sizeof(size_t) * N * aInt[N] );
   double * prob          = (double * ) malloc(sizeof(double) * N );
   double * probMatrix    = (double * ) malloc(sizeof(double) * N * H );
 
@@ -516,14 +512,6 @@ void * minCV_packSubstrata(
     acres[i] =           aDbl[i];
   } 
  
-  /* nNeighbor is the number of neighbors */
-  nNeighbors = (size_t) aInt[N];
-  packedStruct->nNeighbors = nNeighbors;
-
-  /* copy over neighbors */ 
-  for( i=0; i < nNeighbors * N; i++) 
-    neighbors[i] = (size_t) aInt[N + 1 + i];
-  packedStruct->neighbors = neighbors;
 
   /* Nh is the size of each label (vector) */
   Nh = minCV_labelTotalPSUs( I, N, H);
@@ -616,9 +604,6 @@ void minCV_deleteSubstrata( minCV_adminStructPtr  a, size_t dN, size_t N )
   free( a->Nh );
   a->Nh = NULL;
   
-  free( a->neighbors );
-  a->neighbors = NULL;
-  
   free( a->prob );
   a->prob = NULL;
   
@@ -700,9 +685,6 @@ void minCV_diag(
   double * prob = a->prob;
   double * probMatrix = a->probMatrix;
 
-  size_t nNeighbors = a->nNeighbors;
-  size_t * neighbors = a->neighbors;
-
   acres = a->acres;
   size = a->size;
   NhSize = a->NhSize;
@@ -724,18 +706,6 @@ void minCV_diag(
   for( d =0; d < dN; d++) 
     Rprintf("%d:  %f\n",(int) d, Q[d]); 
   
-  /* neighbors */ 
-  /*
-  Rprintf("\nneighbors\n");
-  for( d =0; d < N; d++) {
-    Rprintf("%d:  ",(int) d);
-  
-    for( f =0; f < nNeighbors; f++) 
-      Rprintf("%d, ",(int) neighbors[nNeighbors*d + f] );
-
-    Rprintf("\n");
-  } 
-  */
   
   /* probMatrix */ 
   /*

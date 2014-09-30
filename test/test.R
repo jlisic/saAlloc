@@ -159,8 +159,8 @@ label <- kMean$cluster
 #library(Rsolnp)
 
 ## initial Allocation 
-y <- c(3,3,3) 
-y <- apply( cbind( c(table(label)), y), 1, min) 
+nOpt <- c(3,3,3) 
+nOpt <- apply( cbind( c(table(label)), nOpt), 1, min) 
 
 
 ## items Needed for allocation 
@@ -168,31 +168,7 @@ N     <- aggregate(label,by=list(label),length)[-1]
 S2    <- aggregate(x,by=list(label),var)[-1]
 Total <- aggregate(x,by=list(label),sum)[-1]
 sampleSize <- sum(y)
-#
-### constraint function
-##constraintFunc <- function(y) return( (sum(y) - sampleSize)^2 )
-##
-### objective function
-##objFunc <- function(y){
-##  a <- colSums(S2 * N^2/y)/colSums(Total)^2  - targetCV^2
-##  v <- a * 1/(1+exp(-a))
-##  return( sum(v * v) + constraintFunc(y) )
-##}
-##
-##
-### get optimal sample size
-##optSampleSize <- solnp( 
-##  y,
-##  fun=objFunc, 
-###  eqfun=constraintFunc, 
-##  LB=rep(2,length(y)),
-##  UB=rep(50,length(y)) 
-##  )  
-#
-#
-## adjust 
-##nOpt <- optSampleSize$pars 
-nOpt <- y 
+
 print(nOpt)
 
 
