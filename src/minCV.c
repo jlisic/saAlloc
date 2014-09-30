@@ -172,6 +172,98 @@ size_t minCV_getIndex( double * prob, double totalProbability ) {
 }
 
 
+/* This is a function to update the sample size                              */
+void minCV_sampleSizeChange (
+            void * A,              /* administrative data                     */
+            size_t dN,             /* number of distance matricies            */
+            size_t N,              /* number of elements within a state       */
+            size_t iter
+    ) { 
+
+  minCV_adminStructPtr a;
+
+  /* cast A back to something useable */
+  a = (minCV_adminStructPtr) A; 
+  
+  size_t H = a->H;
+  double * T = a->T;
+  size_t * NhSize = a->NhSize;
+  double ** V = a->V;
+  double * Total = a->Total;
+  double * sampleSize = a->sampleSize;
+  size_t h;
+  size_t i;
+  size_t d;
+  size_t Hi; 
+  size_t Hj;
+  size_t optHj;
+  double objFunc;
+  double objFuncNew;
+  double objFuncTmp;
+
+  double * sampleVar = (double *) malloc( sizeof(double) * H * dN);
+
+  double minSampleSize = 10;
+
+  for( i = 0 ; i < iter; i++ ) {
+
+    /* 0.0 pre calculate */ 
+    for( d = 0; d < dN; d++) 
+      for( h = 0; h < H; h++) 
+        sampleVar[H * d + h] += NhSize[h] * NhSize[h] * V[d][h];   
+  
+    /* 1.0 randomly select a strata */
+    Hi = SA_GETINDEX(H);
+    optHj = H;
+  
+    /* only proceed if stratum Hi can be made smaller */ 
+    if( sampleSize[Hi] <= minSampleSize ) continue; 
+
+  
+    /* 2.0 calculate objective function change for moving to each strata */ 
+    for( Hj = 0; Hj < H; Hj++ ) {
+ 
+      /* if the exchange would make the sample size too big, we don't do it */ 
+      if( sampleSize[Hj] + 1 > NhSize[Hj] ) continue;
+
+      /* so not run over the selected state */
+      if( Hj != Hi) {
+        objFuncNew = 0;
+        for( d = 0; d < dN; d++) { 
+          objFuncTmp = 0;
+      
+          for( h = 0; h < H; h++) {
+            if( h == Hj ) objFuncTmp += sampleVar[H*d+h] / (sampleSize[h] + 1);
+            if( h == Hi ) objFuncTmp += sampleVar[H*d+h] / (sampleSize[h] - 1);
+          }
+   
+          /* only add constraints that are non-negative */     
+          if( objFuncTmp/Total[d] > T[d] ) objFuncNew += objFuncTmp/Total[d] - T[d];
+        }
+     
+        /* check if we are doing better */ 
+        if( objFuncNew < objFunc ) {
+          optHj = Hj;
+          objFuncNew = objFunc;
+        } 
+          
+      }
+    
+    }
+    
+    /* 3.0 if there are reductions in objective function make a move to minimize CV */
+  
+    /* check if H */
+    if( Hj < H ) {
+      sampleSize[Hj]++;
+      sampleSize[Hi]--;
+    }
+
+  }
+
+  free(sampleVar);
+
+}
 
 
 
@@ -195,7 +287,7 @@ double minCV_costChange (
   a = (minCV_adminStructPtr) A; 
   
   double *** C = a->C;
-  double H = a->H;
+  size_t H = a->H;
   double * T = a->T;
   size_t * size = a->size;
   size_t * NhSize = a->NhSize;
@@ -329,7 +421,7 @@ void minCV_update (
             size_t N    /* number of elements within a state */
             ) { 
   
-  size_t l, Hi, d; 
+  size_t l, Hi, d, h; 
   minCV_adminStructPtr a;
   double dil, djl, dij; 
 
@@ -351,6 +443,8 @@ void minCV_update (
   size_t     k = a->k;
   size_t     H = a->H;
   double *   x = a->x;
+  double *   T = a->T;
+  double *   Total = a->Total;
   double * prob = a->prob;
   double * probMatrix = a->probMatrix;
   double totalProbability = a->totalProbability;
@@ -398,9 +492,6 @@ void minCV_update (
 
   for( d=0; d < dN; d++) {
       
-   Q[d] = R[d];
-
-
    /* update the variance, this must be done before C gets updated */
 
 
@@ -430,6 +521,23 @@ void minCV_update (
 
   NhAcres[Hi] -= acres[i];
   NhAcres[Hj] += acres[i];
+
+  /* improve the sample size */ 
+  minCV_sampleSizeChange ( A, dN, N, 100 );
+  
+
+  /* update Q */
+  for( d=0; d < dN; d++) {
+    
+    Q[d] = 0;
+
+    for( h = 0; h < H; h++) 
+      Q[d] += NhSize[h] * NhSize[h] * V[d][h] / sampleSize[h];   
+
+    /* get the distance between */
+    Q[d] = sqrt( Q[d] ) / Total[d] - T[d];
+
+  }
   
   return;
 }

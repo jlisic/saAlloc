@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <stdbool.h>
 #include "R.h"
 #include "Rmath.h"
 #include "dist.h"
@@ -178,5 +179,13 @@ size_t minCV_getIndex( double * prob, double totalProbability );
  
 /* function to select what strata a selected unit moved to */
 size_t minCV_getMoveStrata( size_t i, size_t * I, double * prob, double * probMatrix, size_t N, size_t H); 
+
+/* function to minimize the sample design */
+void minCV_sampleSizeChange (
+            void * A,              /* administrative data                     */
+            size_t dN,             /* number of distance matricies            */
+            size_t N,              /* number of elements within a state       */
+            size_t iter           /* number of iterations */
+    ); 
 
 #endif
