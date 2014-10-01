@@ -99,7 +99,7 @@ size_t minCV_randomState (
     }
 
     /* fail on lack of matches */
-    if( trys >= 1000 ) {
+    if( trys >= 5 ) {
       Rprintf(" 1000 failures on finding a possible move, giving up\n"); 
       break;
     }
@@ -203,22 +203,45 @@ void minCV_sampleSizeChange (
 
   double * sampleVar = (double *) malloc( sizeof(double) * H * dN);
 
-  double minSampleSize = 10;
+  double minSampleSize = 2;
+
 
   for( i = 0 ; i < iter; i++ ) {
 
     /* 0.0 pre calculate */ 
     for( d = 0; d < dN; d++) 
       for( h = 0; h < H; h++) 
-        sampleVar[H * d + h] += NhSize[h] * NhSize[h] * V[d][h];   
+        sampleVar[H * d + h] = NhSize[h] * NhSize[h] * V[d][h];   
+       
+    /* get the initial objective function */ 
+    objFunc = 0;
+    for( d = 0; d < dN; d++) { 
+      objFuncTmp = 0;
+      for( h = 0; h < H; h++) {
+        objFuncTmp += sampleVar[H*d+h] / sampleSize[h];
+//        printf("sampleVar = %f\n", sampleVar[H*d+h]);     
+//        printf("sampleSize[%d] = %f\n",(int) h, sampleSize[h]);
+      }
+
+/*  
+      printf("objFunc = %f\n",objFuncTmp);
+      printf("Total[%d] = %f\n", (int) d, Total[d]);
+      printf("T[%d] = %f\n", (int) d, T[d]);
+*/
+
+      /* only add constraints that are non-negative */     
+      if( sqrt(objFuncTmp)/Total[d] > T[d] ) objFunc += sqrt(objFuncTmp)/Total[d] - T[d];
+    }
   
     /* 1.0 randomly select a strata */
     Hi = SA_GETINDEX(H);
     optHj = H;
-  
-    /* only proceed if stratum Hi can be made smaller */ 
-    if( sampleSize[Hi] <= minSampleSize ) continue; 
+ 
 
+    /* only proceed if stratum Hi can be made smaller */ 
+    if( sampleSize[Hi] < minSampleSize + 1 ) continue; 
+    
+//    Rprintf("  iter: %d\tHi = %d:\t%f , nh = %f \n", (int) i, (int) Hi, objFunc, sampleSize[Hi] );
   
     /* 2.0 calculate objective function change for moving to each strata */ 
     for( Hj = 0; Hj < H; Hj++ ) {
@@ -238,25 +261,26 @@ void minCV_sampleSizeChange (
           }
    
           /* only add constraints that are non-negative */     
-          if( objFuncTmp/Total[d] > T[d] ) objFuncNew += objFuncTmp/Total[d] - T[d];
+          if( sqrt(objFuncTmp)/Total[d] > T[d] ) objFuncNew += sqrt(objFuncTmp)/Total[d] - T[d];
         }
-     
+       
+//        Rprintf("    iter: %d\tHj = %d: %f nh = %f \n", (int) i , (int) Hj, objFuncNew, sampleSize[Hj] );
+
         /* check if we are doing better */ 
         if( objFuncNew < objFunc ) {
           optHj = Hj;
           objFuncNew = objFunc;
         } 
-          
       }
-    
+      
     }
     
     /* 3.0 if there are reductions in objective function make a move to minimize CV */
   
     /* check if H */
-    if( Hj < H ) {
-      sampleSize[Hj]++;
-      sampleSize[Hi]--;
+    if( optHj < H ) {
+      sampleSize[optHj] += 1.0;
+      sampleSize[Hi] -= 1.0;
     }
 
   }
@@ -523,8 +547,7 @@ void minCV_update (
   NhAcres[Hj] += acres[i];
 
   /* improve the sample size */ 
-  minCV_sampleSizeChange ( A, dN, N, 100 );
-  
+  minCV_sampleSizeChange ( A, dN, N, 1000 );
 
   /* update Q */
   for( d=0; d < dN; d++) {

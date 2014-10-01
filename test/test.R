@@ -93,7 +93,7 @@ targetCV <- c(.01,.01,.01)
 b <- saMinCV(
 x,
 label,
-iter=92,
+iter=10,
 cooling=0,
 targetCV=targetCV,
 sampleSize=8, 
@@ -112,9 +112,9 @@ print( 2*sqrt(colSums(aggregate(x,by=list(b$label),var))[-1]) / colSums(x) )
 
 
 
-nHigh   <- 10
-nMed    <- 5 
-nLow <- 15
+nHigh   <- 20
+nMed    <- 10 
+nLow <- 30 
 
 # high density cultivation, few farms
 highCult <- cbind( 
@@ -159,7 +159,7 @@ label <- kMean$cluster
 #library(Rsolnp)
 
 ## initial Allocation 
-nOpt <- c(3,3,3) 
+nOpt <- c(5,5,5) 
 nOpt <- apply( cbind( c(table(label)), nOpt), 1, min) 
 
 
@@ -167,7 +167,7 @@ nOpt <- apply( cbind( c(table(label)), nOpt), 1, min)
 N     <- aggregate(label,by=list(label),length)[-1]
 S2    <- aggregate(x,by=list(label),var)[-1]
 Total <- aggregate(x,by=list(label),sum)[-1]
-sampleSize <- sum(y)
+sampleSize <- sum(nOpt)
 
 print(nOpt)
 
@@ -182,7 +182,7 @@ prob <- prob/rowSums(prob)
 b <- saMinCV(
 x,
 label-1,
-iter=1000,
+iter=30000,
 cooling=0,
 targetCV=targetCV,
 sampleSize=nOpt  

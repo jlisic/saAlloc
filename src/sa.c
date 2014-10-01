@@ -156,7 +156,6 @@ double * sa(
   Rprintf("\n");
 #endif
 
-//  diagFunction(i,I,Q,A,dN,N);
 
     i++; 
   } 
@@ -166,6 +165,7 @@ double * sa(
   PutRNGstate();
 #endif
 
+  diagFunction(i,I,Q,A,dN,N);
 
   return( costChange );
 
