@@ -18,7 +18,7 @@ Date: \tab 2014-07-28\cr
 License: \tab Public Domain\cr
 }
  
-saMinCV: allocate a set of observations to target strata based on minimizing multiple target CVS.
+saMinCV: currently exchange only, uses an exchange algorithm to form strata from a set of PSU's and simultaneously updated the allocation at each iteration. 
 
 saEqualClus: allocate a set of observations to target strata based on minimizing total sample size based on a set of target variances (for fixed size strata only).
 

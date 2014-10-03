@@ -175,6 +175,8 @@ size_t minCV_getIndex( double * prob, double totalProbability ) {
 /* This is a function to update the sample size                              */
 void minCV_sampleSizeChange (
             void * A,              /* administrative data                     */
+            double * Q,            
+            double * R,
             size_t dN,             /* number of distance matricies            */
             size_t N,              /* number of elements within a state       */
             size_t iter
@@ -197,42 +199,32 @@ void minCV_sampleSizeChange (
   size_t Hi; 
   size_t Hj;
   size_t optHj;
-  double objFunc;
-  double objFuncNew;
-  double objFuncTmp;
+  double maxRLocal;
 
   double * sampleVar = (double *) malloc( sizeof(double) * H * dN);
+  double * RLocal = (double *) malloc( sizeof(double) * dN);
 
   double minSampleSize = 2;
+    
+  /* the goal here is fairly simple 
+     * 0.0  we want to get the initial objective function, this is the typical max difference for CV's that violate the minCV constraint
+     * 1.0  now we randomly select a strata
+     * 2.0  now we want to see which strata we can a 'draw' to.
+   */
+    
+  /********* 0.0 pre calculate *************/
 
+  /* 0.1 pre-calculate the sample variance */ 
+  for( d = 0; d < dN; d++) 
+    for( h = 0; h < H; h++) 
+      sampleVar[H * d + h] = NhSize[h] * NhSize[h] * V[d][h];   
 
+  /* 0.2 copy Q to R */
+  for( d = 0; d < dN; d++) R[d] = Q[d];
+
+  /* iterate a fixed number of times */
   for( i = 0 ; i < iter; i++ ) {
-
-    /* 0.0 pre calculate */ 
-    for( d = 0; d < dN; d++) 
-      for( h = 0; h < H; h++) 
-        sampleVar[H * d + h] = NhSize[h] * NhSize[h] * V[d][h];   
-       
-    /* get the initial objective function */ 
-    objFunc = 0;
-    for( d = 0; d < dN; d++) { 
-      objFuncTmp = 0;
-      for( h = 0; h < H; h++) {
-        objFuncTmp += sampleVar[H*d+h] / sampleSize[h];
-//        printf("sampleVar = %f\n", sampleVar[H*d+h]);     
-//        printf("sampleSize[%d] = %f\n",(int) h, sampleSize[h]);
-      }
-
-/*  
-      printf("objFunc = %f\n",objFuncTmp);
-      printf("Total[%d] = %f\n", (int) d, Total[d]);
-      printf("T[%d] = %f\n", (int) d, T[d]);
-*/
-
-      /* only add constraints that are non-negative */     
-      if( sqrt(objFuncTmp)/Total[d] > T[d] ) objFunc += sqrt(objFuncTmp)/Total[d] - T[d];
-    }
-  
+      
     /* 1.0 randomly select a strata */
     Hi = SA_GETINDEX(H);
     optHj = H;
@@ -240,37 +232,53 @@ void minCV_sampleSizeChange (
 
     /* only proceed if stratum Hi can be made smaller */ 
     if( sampleSize[Hi] < minSampleSize + 1 ) continue; 
-    
-//    Rprintf("  iter: %d\tHi = %d:\t%f , nh = %f \n", (int) i, (int) Hi, objFunc, sampleSize[Hi] );
+
+#ifdef DEBUG    
+Rprintf("  iter: %d\tHi = %d, nh = %f \n", (int) i, (int) Hi, sampleSize[Hi] );
+for( d=0; d < dN; d++) Rprintf("    R[%d] = %f\n", (int) d, R[d]);
+#endif
+
   
     /* 2.0 calculate objective function change for moving to each strata */ 
     for( Hj = 0; Hj < H; Hj++ ) {
+      maxRLocal = 0;
  
       /* if the exchange would make the sample size too big, we don't do it */ 
       if( sampleSize[Hj] + 1 > NhSize[Hj] ) continue;
 
-      /* so not run over the selected state */
+      /* do not run over the selected state */
       if( Hj != Hi) {
-        objFuncNew = 0;
         for( d = 0; d < dN; d++) { 
-          objFuncTmp = 0;
+          RLocal[d] = 0;
       
           for( h = 0; h < H; h++) {
-            if( h == Hj ) objFuncTmp += sampleVar[H*d+h] / (sampleSize[h] + 1);
-            if( h == Hi ) objFuncTmp += sampleVar[H*d+h] / (sampleSize[h] - 1);
+            if( h == Hj ) RLocal[d] += sampleVar[H*d+h] / (sampleSize[h] + 1);
+            if( h == Hi ) RLocal[d] += sampleVar[H*d+h] / (sampleSize[h] - 1);
           }
-   
-          /* only add constraints that are non-negative */     
-          if( sqrt(objFuncTmp)/Total[d] > T[d] ) objFuncNew += sqrt(objFuncTmp)/Total[d] - T[d];
+
+          RLocal[d] = sqrt(RLocal[d])/Total[d] - T[d];
+  
+          /* check if we are doing better than Q[d] for every violated d */ 
+          if( RLocal[d] > 0 ) { 
+           
+            if( RLocal[d] > R[d] ) {
+              maxRLocal = INFINITY; 
+              break;
+            } 
+          }
         }
-       
-//        Rprintf("    iter: %d\tHj = %d: %f nh = %f \n", (int) i , (int) Hj, objFuncNew, sampleSize[Hj] );
+        /* finished iterating over all commodities */
+
 
         /* check if we are doing better */ 
-        if( objFuncNew < objFunc ) {
+        if( maxRLocal < INFINITY ) {
           optHj = Hj;
-          objFuncNew = objFunc;
+          for( d = 0; d < dN; d++) R[d] = RLocal[d];
         } 
+#ifdef DEBUG    
+Rprintf("  iter: %d\tHj = %d, nh = %f \n", (int) i, (int) Hj, sampleSize[Hj] );
+for( d=0; d < dN; d++) Rprintf("    R[%d] = %f\n", (int) d, R[d]);
+#endif
       }
       
     }
@@ -279,14 +287,15 @@ void minCV_sampleSizeChange (
   
     /* check if H */
     if( optHj < H ) {
+      for( d = 0; d < dN; d++) Q[d] = R[d];
       sampleSize[optHj] += 1.0;
       sampleSize[Hi] -= 1.0;
     }
 
   }
 
+  free(RLocal);
   free(sampleVar);
-
 }
 
 
@@ -304,11 +313,8 @@ double minCV_costChange (
             size_t N               /* number of elements within a state       */
     ) { 
 
-  minCV_adminStructPtr a;
-
-
   /* cast A back to something useable */
-  a = (minCV_adminStructPtr) A; 
+  minCV_adminStructPtr a = (minCV_adminStructPtr) A; 
   
   double *** C = a->C;
   size_t H = a->H;
@@ -515,10 +521,9 @@ void minCV_update (
 
 
   for( d=0; d < dN; d++) {
+    Q[d] = R[d];
       
    /* update the variance, this must be done before C gets updated */
-
-
    V[d][Hj] = 
         (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj]) / ( (double)  (NhSize[Hj] + size[i] - 1) * (NhSize[Hj] + size[i] ) );
 
@@ -547,20 +552,7 @@ void minCV_update (
   NhAcres[Hj] += acres[i];
 
   /* improve the sample size */ 
-  minCV_sampleSizeChange ( A, dN, N, 1000 );
-
-  /* update Q */
-  for( d=0; d < dN; d++) {
-    
-    Q[d] = 0;
-
-    for( h = 0; h < H; h++) 
-      Q[d] += NhSize[h] * NhSize[h] * V[d][h] / sampleSize[h];   
-
-    /* get the distance between */
-    Q[d] = sqrt( Q[d] ) / Total[d] - T[d];
-
-  }
+  minCV_sampleSizeChange ( A, Q, R, dN, N, 10 );
   
   return;
 }

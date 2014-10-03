@@ -34,7 +34,8 @@ void R_minCV (
       int * ANIntInt,  /* number of double admin recordds        1      */
       int * ANDblInt,  /* number of integer admin recors         1      */
       int * dup,       /* UNTESTED/UNUSED dup vector             n      */
-      double * costChangeDbl /* (costChange,T) per item          iter * 3 */
+      double * costChangeDbl, /* (costChange,T) per item          iter * 3 */
+      double * doubleSampleSize   /* output sample size */
     ) { 
   
   /* note that we get ints from R and we want to work with size_t, which are not the same for most systems */ 
@@ -69,8 +70,7 @@ void R_minCV (
   /* copy over some data */
   for( i=0; i < N; i++) 
     I[i] = (size_t) IInt[i];
-
-
+  
   J          = (size_t * ) malloc(sizeof(size_t) * N );
 
   R          = (double * ) malloc(sizeof(double) * (dN +1) );
@@ -134,7 +134,15 @@ void R_minCV (
   /* copy index back */
   for( i=0; i < N; i++) 
     IInt[i] = (int) I[i];
-  
+
+  /* copy sample size back */
+  minCV_adminStructPtr a = (minCV_adminStructPtr) A; 
+  size_t H = a->H;
+  double * sampleSize = a->sampleSize;
+
+  for( i = 0; i < H; i++)  
+    doubleSampleSize[i] = sampleSize[i];
+
   /* clean up */
   free(I);
   free(J);

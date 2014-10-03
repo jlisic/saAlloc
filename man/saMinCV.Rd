@@ -8,7 +8,7 @@ Minimum CV Strata Formation via Simulated Annealing
 This function exchanges sampling units between strata to minimzie the target CV.
 }
 \usage{
-saMinCV (x, label, iterations=1000, cooling=0, segments=rep(1,nrow(x)), PSUAcres=rep(1,nrow(x)), targetCV, sampleSize, targetVarWithin=rep(0,ncol(x)), tolSize=1)
+saMinCV (x, label, targetCV, sampleSize, weightMatrix, iterations=1000, cooling=0, segments=rep(1,nrow(x)), PSUAcres=rep(1,nrow(x)), targetVarWithin=rep(0,ncol(x)))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -17,6 +17,15 @@ saMinCV (x, label, iterations=1000, cooling=0, segments=rep(1,nrow(x)), PSUAcres
   }
   \item{label}{
   (Required) Initial stratum assignment.
+  }
+  \item{targetCV}{
+  (Required) Target CV, must be equal to the columns of x
+  }
+  \item{sampleSize}{
+  (Required) sample size, either a scalar that will be equally split between strata, or a sample size for each strata.
+  }
+  \item{weightMatrix}{
+  matrix of size nrow(x) by total strata, the higher the weight for a PSU for a particular strata relative to the PSU's other strata weight the more likely it is to be moved to that strata. 
   }
   \item{iterations}{
   Number of iterations to perform of the Simulated Annealing procedure.
@@ -30,17 +39,8 @@ saMinCV (x, label, iterations=1000, cooling=0, segments=rep(1,nrow(x)), PSUAcres
   \item{PSUAcres}{
   PSU size (originally done in acres), 
   }
-  \item{targetCV}{
-  (Required) Target CV, must be equal to the columns of x
-  }
-  \item{sampleSize}{
-  (Required) sample size, either a scalar that will be equally split between strata, or a sample size for each strata.
-  }
   \item{targetVarWithin}{
   If prior clustering is performed and assumed constant across the population then it can be handled here.
-  }
-  \item{tolSize}{
-  Acceptable difference between PSUacres. 
   }
 }
 \details{
@@ -50,6 +50,7 @@ saMinCV (x, label, iterations=1000, cooling=0, segments=rep(1,nrow(x)), PSUAcres
   \item{accept}{ Matrix with three columns and a row for each iteration, "change": change in objective function, "U": uniform random variable, "accepted": 1 - accepted, 0 - not accepted }
   \item{cost}{ Objective Function }
   \item{label}{ Final Label }
+  \item{sampleSize}{ Final Sample Size }
 }
 \references{
 %% ~put references to the literature/web site here ~

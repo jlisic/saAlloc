@@ -4,14 +4,15 @@ function(
   label,
   targetCV,
   sampleSize,
-  probMatrix,            # missing handled
+  weightMatrix,            # missing handled
   iterations=1000,
   cooling=0,
   segments=rep(1,nrow(x)),
   PSUAcres=rep(1,nrow(x)),
-  targetVarWithin=rep(0,ncol(x)),
-  tolSize=1
+  targetVarWithin=rep(0,ncol(x))
   ) {
+
+  tolSize <- 1 # not used
 
 
   # check if X is a matrix
@@ -38,23 +39,23 @@ function(
   #################### PROBABILITY ######################################
  
   # get prob
-  if( missing(probMatrix) ) {
-    probMatrix <- matrix( 1/N, nrow=N, ncol=H)
+  if( missing(weightMatrix) ) {
+    weightMatrix <- matrix( 1/N, nrow=N, ncol=H)
   }
 
   # check prob
-  if(( nrow(probMatrix) != N) | (ncol(probMatrix) != H )) {
-    stop( sprintf("probMatrixability matrix (probMatrix) does not have correct dimensions\n Needed (nrow = %d, ncol = %d), provided (nrow = %d, ncol = %d)\n",
-                 N, d, nrow(probMatrix), ncol(probMatrix) ) ) 
+  if(( nrow(weightMatrix) != N) | (ncol(weightMatrix) != H )) {
+    stop( sprintf("probMatrixability matrix (weightMatrix) does not have correct dimensions\n Needed (nrow = %d, ncol = %d), provided (nrow = %d, ncol = %d)\n",
+                 N, d, nrow(weightMatrix), ncol(weightMatrix) ) ) 
   }
 
   # get max prob
-  prob <- 1 - apply(cbind(label,probMatrix), 1, function(x) x[x[1]+2] ) 
+  prob <- 1 - apply(cbind(label,weightMatrix), 1, function(x) x[x[1]+2] ) 
 
   totalProb <- sum(prob)
   print(sprintf("TotalProb = %f", totalProb))
   # create row major matrix for input to C program
-  probMatrix <- c(t(probMatrix))
+  weightMatrix <- c(t(weightMatrix))
 
 
   #################### TOTALS ######################################
@@ -79,7 +80,7 @@ function(
     total, 
     sampleSize, 
     prob, 
-    probMatrix, 
+    weightMatrix, 
     totalProb,
     cooling, 
     tolSize 
@@ -105,19 +106,20 @@ function(
   #################### RUN C FUNCTION ######################################
   
 r.result <- .C("R_minCV",
-  as.double(c(x)),      #checked
-  as.integer(k),           #checked
-  as.integer(d),           #checked 
-  as.integer(N),           #checked
-  as.integer(iterations),  #checked
-  as.integer(label),       #checked
-  as.double(cost),         #checked Q
-  as.double(adminDbl),     #checked
-  as.integer(adminInt),     #checked
-  as.integer(adminIntLength), #checked
-  as.integer(adminDblLength), #checked
-  as.integer(dup),        #checked
-  as.double(acceptRate)   #checked 
+  as.double(c(x)),            #checked       1
+  as.integer(k),              #checked       2
+  as.integer(d),              #checked       3
+  as.integer(N),              #checked       4
+  as.integer(iterations),     #checked       5
+  as.integer(label),          #checked       6
+  as.double(cost),            #checked Q     7
+  as.double(adminDbl),        #checked       8
+  as.integer(adminInt),       #checked       9
+  as.integer(adminIntLength), #checked      10
+  as.integer(adminDblLength), #checked      11
+  as.integer(dup),            #checked      12
+  as.double(acceptRate),      #checked      13
+  as.double(sampleSize)       #checked      14
 )
 
   print("C running time")
@@ -129,7 +131,7 @@ r.result <- .C("R_minCV",
   a <- matrix(unlist(r.result[13]),ncol=3,byrow=T)
   colnames(a) <- c( 'change', 'U', 'accepted')
 
-  myList <- list("accept"=a, "cost"=unlist(r.result[7]), "label"=unlist(r.result[6]))
+  myList <- list("accept"=a, "cost"=unlist(r.result[7]), "label"=unlist(r.result[6]), "sampleSize"=unlist(r.result[14]) )
     
   return(myList)
 }

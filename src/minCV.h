@@ -182,10 +182,12 @@ size_t minCV_getMoveStrata( size_t i, size_t * I, double * prob, double * probMa
 
 /* function to minimize the sample design */
 void minCV_sampleSizeChange (
-            void * A,              /* administrative data                     */
+            void * A,              /* administrative data, destructive to sampleSize    */
+            double * Q,            /* current cost, destructive */
+            double * R,            /* new cost, destructive */
             size_t dN,             /* number of distance matricies            */
             size_t N,              /* number of elements within a state       */
-            size_t iter           /* number of iterations */
+            size_t iter            /* number of iterations */
     ); 
 
 #endif
