@@ -67,7 +67,6 @@ size_t minCV_randomState (
 
   minCV_adminStructPtr a;
 
-  //size_t * possibleMoves; /* array to hold possible moves */
 
   /* cast A back to somethine useable */
   a = (minCV_adminStructPtr) A; 
@@ -80,6 +79,16 @@ size_t minCV_randomState (
   size_t H = a->H;
   size_t ** L = a->L;
   size_t trys = 0;  /* number of times to try */
+
+
+  /* first check if there is anything to do */
+  for( d = 0; d < dN; d++) {
+    if( Q[d] > 0 ) break;
+  }
+
+  /* if d = dN then all constraints are satisfied */
+  if( d == dN) return(N+1);
+
 
   while( i >= N ) {
 
