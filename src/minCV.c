@@ -233,11 +233,11 @@ void minCV_sampleSizeChange (
     /* only proceed if stratum Hi can be made smaller */ 
     if( sampleSize[Hi] < minSampleSize + 1 ) continue; 
 
-#ifdef DEBUG    
+
+#ifdef DEBUG 
 Rprintf("  iter: %d\tHi = %d, nh = %f \n", (int) i, (int) Hi, sampleSize[Hi] );
 for( d=0; d < dN; d++) Rprintf("    R[%d] = %f\n", (int) d, R[d]);
 #endif
-
   
     /* 2.0 calculate objective function change for moving to each strata */ 
     for( Hj = 0; Hj < H; Hj++ ) {
@@ -252,8 +252,13 @@ for( d=0; d < dN; d++) Rprintf("    R[%d] = %f\n", (int) d, R[d]);
           RLocal[d] = 0;
       
           for( h = 0; h < H; h++) {
-            if( h == Hj ) RLocal[d] += sampleVar[H*d+h] / (sampleSize[h] + 1);
-            if( h == Hi ) RLocal[d] += sampleVar[H*d+h] / (sampleSize[h] - 1);
+            if( h == Hj ) { 
+              RLocal[d] += sampleVar[H*d+h] / (sampleSize[h] + 1); 
+            } else if( h == Hi ) {
+              RLocal[d] += sampleVar[H*d+h] / (sampleSize[h] - 1);
+            } else { 
+              RLocal[d] += sampleVar[H*d+h] / sampleSize[h];
+            }
           }
 
           RLocal[d] = sqrt(RLocal[d])/Total[d] - T[d];
@@ -275,6 +280,7 @@ for( d=0; d < dN; d++) Rprintf("    R[%d] = %f\n", (int) d, R[d]);
           optHj = Hj;
           for( d = 0; d < dN; d++) R[d] = RLocal[d];
         } 
+
 #ifdef DEBUG    
 Rprintf("  iter: %d\tHj = %d, nh = %f \n", (int) i, (int) Hj, sampleSize[Hj] );
 for( d=0; d < dN; d++) Rprintf("    R[%d] = %f\n", (int) d, R[d]);
@@ -408,9 +414,16 @@ double minCV_costChange (
         ( (NhSizeHi - 1) * (nhSizeHi) ) * NhSizeHi 
       ) / Total[d] - T[d];
 
-/*    
-    Rprintf("d:\tR[d] = %f, Q[d] = %f, R[d]+T[d]=%f, Q[d]+T[d]=%f\n", (int) d,R[d], Q[d], R[d] + T[d], Q[d]+T[d]);
-    if( R[d] - Q[d] == 0 ) printf("R[d] - Q[d] == 0\n");
+#ifdef DEBUG 
+    Rprintf("%d:\tR[%d] = %f, Q[%d] = %f, R[%d]+T[%d]=%f, Q[%d]+T[%d]=%f\n", 
+        (int) d,
+        (int) d, R[d], 
+        (int) d, Q[d], 
+        (int) d, (int) d, R[d] + T[d], 
+        (int) d, (int) d, Q[d]+T[d]);
+#endif
+
+/*    if( R[d] - Q[d] == 0 ) printf("R[d] - Q[d] == 0\n");
     if( R[d] - Q[d] < 0 )  printf("R[d] - Q[d] < 0\n");
     if( R[d] - Q[d] > 0 )  printf("R[d] - Q[d] > 0\n");
 */
