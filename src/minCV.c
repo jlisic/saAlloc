@@ -99,7 +99,7 @@ size_t minCV_randomState (
     }
 
     /* fail on lack of matches */
-    if( trys >= 5 ) {
+    if( trys >= 1000 ) {
       Rprintf(" 1000 failures on finding a possible move, giving up\n"); 
       break;
     }
