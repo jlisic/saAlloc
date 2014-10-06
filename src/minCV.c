@@ -79,7 +79,7 @@ size_t minCV_randomState (
   size_t H = a->H;
   size_t ** L = a->L;
   size_t trys = 0;  /* number of times to try */
-
+  size_t d;
 
   /* first check if there is anything to do */
   for( d = 0; d < dN; d++) {
