@@ -8,7 +8,19 @@ Minimum CV Strata Formation and Allocation via Simulated Annealing
 This function exchanges sampling units between strata to minimzie the target CV, for each accepted exchange a number of iterations are performed to improve the target CV by changing the sample allocation.
 }
 \usage{
-saMinCV (x, label, targetCV, sampleSize, weightMatrix, iterations=1000, sampleIterations=100, cooling=0, segments=rep(1,nrow(x)), PSUAcres=rep(1,nrow(x)), targetVarWithin=rep(0,ncol(x)))
+saMinCV(
+     x, 
+     label, 
+     targetCV, 
+     sampleSize, 
+     weightMatrix, 
+     iterations=1000, 
+     sampleIterations=100, 
+     cooling=0, 
+     segments=rep(1,nrow(x)), 
+     PSUAcres=rep(1,nrow(x)), 
+     targetVarWithin=rep(0,ncol(x))
+   )
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

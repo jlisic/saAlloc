@@ -8,7 +8,17 @@ Optimal Equal Sized Strata Formation and Allocation via Simulated Annealing
 This function minimizes the sample size for a fixed set of target variances by moving sampling units between strata.
 }
 \usage{
-saEqualClus(x, label, iterations=1000, cooling=0, segments=rep(1,nrow(x)), PSUAcres=rep(1,nrow(x)), targetVar, targetVarWithin=rep(0,ncol(x)), tolSize=0.05)
+saEqualClus(
+      x, 
+      label, 
+      iterations=1000, 
+      cooling=0, 
+      segments=rep(1,nrow(x)), 
+      PSUAcres=rep(1,nrow(x)), 
+      targetVar, 
+      targetVarWithin=rep(0,ncol(x)), 
+      tolSize=0.05
+    )
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
