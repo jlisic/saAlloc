@@ -14,7 +14,10 @@ function(
   
   Cprog <- proc.time()
   
-  rlabel <- label
+  unique.label <- unique(label)
+  rlabel <- sapply(label, function(x){ which(x == unique.label) - 1} ) 
+  
+
   n <- length(label)
   d <- ncol(x)
   k <- length(c(x)) / ( n * d)
@@ -29,7 +32,7 @@ function(
 
 
   # CHECK FOR VIOLATION OF TOLSIZE
-  checkAcres <- aggregate(PSUAcres,by=list(label),sum)$x
+  checkAcres <- aggregate(PSUAcres,by=list(rlabel),sum)$x
   if( 1 - min(checkAcres) / max(checkAcres) > tolSize ) { 
     print("Initial Acreages Assumptions violated")
     print("Returning NULL")
@@ -52,7 +55,7 @@ r.result <- .C("R_substrata2",
   as.integer(d),           #checked 
   as.integer(n),           #checked
   as.integer(iterations),  #checked
-  as.integer(label),       #checked
+  as.integer(rlabel),       #checked
   as.double(cost),         #checked Q
   as.double(adminDbl),     #checked
   as.integer(adminInt),     #checked
@@ -64,13 +67,15 @@ r.result <- .C("R_substrata2",
 
   print("C running time")
   print(proc.time() - Cprog) 
+  
+  rlabel <- sapply(unlist(r.result[6]), function(x) unique.label[x+1] ) 
                  
   a <- matrix(unlist(r.result[13]),ncol=3,byrow=T) 
   colnames(a) <- c( 'change', 'U', 'accepted')
 
   myList <- list("accept"=a,
                  "cost"=r.result[7], 
-                 "label"=r.result[6])
+                 "label"=rlabel)
     
   return(myList)
 }

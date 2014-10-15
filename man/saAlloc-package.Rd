@@ -3,7 +3,7 @@
 \alias{saAlloc}
 \docType{package}
 \title{
-Optimal allocation of sampling units to strata using simulated annealing 
+Optimal allocation of sampling units to form strata using simulated annealing 
 }
 \description{
 Description: This program performs optimal allocation of sampling units to a set of strata via simulated annealing.  
@@ -28,13 +28,8 @@ Jonathan Lisic
 
 Maintainer: <jonathan.lisic@nass.usda.gov>
 }
-\references{
-
-}
 \keyword{ package }
 \keyword{ survey }
-\seealso{
-}
 \examples{
 # data set with 100 observations and 4 characteristics split between two strata
 x <- matrix(rnorm( 100*4 ),ncol=4)  

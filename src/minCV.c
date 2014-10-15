@@ -77,7 +77,6 @@ size_t minCV_randomState (
   double totalProbability = a->totalProbability;
   size_t i =N+1;
   size_t H = a->H;
-  size_t ** L = a->L;
   size_t trys = 0;  /* number of times to try */
   size_t d;
 
@@ -133,7 +132,6 @@ size_t minCV_getMoveStrata(
     size_t H
     ) {
 
-  size_t k = 0;
   size_t Hi = I[i];
   double totalProb = 0;
   double total;
@@ -210,6 +208,9 @@ void minCV_sampleSizeChange (
   size_t optHj;
   double maxRLocal;
 
+  /* if there is nothing to do, do nothing */
+  if( iter == 0) return; 
+
   double * sampleVar = (double *) malloc( sizeof(double) * H * dN);
   double * RLocal = (double *) malloc( sizeof(double) * dN);
 
@@ -242,12 +243,6 @@ void minCV_sampleSizeChange (
     /* only proceed if stratum Hi can be made smaller */ 
     if( sampleSize[Hi] < minSampleSize + 1 ) continue; 
 
-
-#ifdef DEBUG 
-Rprintf("  iter: %d\tHi = %d, nh = %f \n", (int) i, (int) Hi, sampleSize[Hi] );
-for( d=0; d < dN; d++) Rprintf("    R[%d] = %f\n", (int) d, R[d]);
-#endif
-  
     /* 2.0 calculate objective function change for moving to each strata */ 
     for( Hj = 0; Hj < H; Hj++ ) {
       maxRLocal = 0;
@@ -290,10 +285,6 @@ for( d=0; d < dN; d++) Rprintf("    R[%d] = %f\n", (int) d, R[d]);
           for( d = 0; d < dN; d++) R[d] = RLocal[d];
         } 
 
-#ifdef DEBUG    
-Rprintf("  iter: %d\tHj = %d, nh = %f \n", (int) i, (int) Hj, sampleSize[Hj] );
-for( d=0; d < dN; d++) Rprintf("    R[%d] = %f\n", (int) d, R[d]);
-#endif
       }
       
     }
@@ -311,6 +302,7 @@ for( d=0; d < dN; d++) Rprintf("    R[%d] = %f\n", (int) d, R[d]);
 
   free(RLocal);
   free(sampleVar);
+  return;
 }
 
 
@@ -338,14 +330,11 @@ double minCV_costChange (
   size_t * NhSize = a->NhSize;
   double ** V = a->V;
   double * Total = a->Total;
-  size_t k = a->k;                 /* size of an element within a commodity */
-  double * x = a->x;               /* the data */
   size_t Hj = a->Hj;               /* get our chosen strata */
   double * sampleSize = a->sampleSize;
   double delta = 0;
-  double dij;
   size_t h;
-  double  fixedVar;
+  double fixedVar;
   size_t  Hi, d; 
 
   double NhSizeHj, NhSizeHi, nhSizeHi, nhSizeHj;
@@ -353,32 +342,10 @@ double minCV_costChange (
   /* figure out change in cost */
   Hi = I[i]; 
 
-#ifdef DEBUG
-  printf("\n(i=%d, j = %d)\n", (int) i, (int) j);
-  printf("\n(Hi=%d,Hj=%d)\n", (int) Hi, (int) Hj);
-#endif
   
   /*this calculates psuedo nh's for each stratum*/
   for(d = 0; d < dN; d++) {
 
-#ifdef DEBUG 
-   printf(" ==== d = %d ==== \n", (int) d);
-   printf("dij = %f\n", dij);
-   printf("Q[%zu] =%f\n",d, Q[d]);  
-   printf("V[%zu][%zu] =%f\n",d,Hi, V[d][Hi]);  
-   printf("V[%zu][%zu] =%f\n",d,Hj, V[d][Hj]);  
-   printf("T[%zu] =%f\n",d, T[d]);  
-   printf("C[%zu][%zu][%zu] =%f\n",d,i,Hi, C[d][i][Hi]);  
-   printf("C[%zu][%zu][%zu] =%f\n",d,i,Hj, C[d][i][Hj]);  
-   printf("C[%zu][%zu][%zu] =%f\n",d,j,Hi, C[d][j][Hi]);  
-   printf("C[%zu][%zu][%zu] =%f\n",d,j,Hj, C[d][j][Hj]);  
-   printf("size[%zu] =%zu\n",i, size[d]);  
-   printf("NhSize[%zu] =%zu\n",Hi, NhSize[Hi]);  
-   printf("NhSize[%zu] =%zu\n",Hj, NhSize[Hj]);  
-#endif
-
-    
-//   dij = getDistX(i,j,x,k,d,N,squaredEuclidianMeanDist); 
 
     /* get the variance total for the otehr strata */
     fixedVar = 0;
@@ -400,19 +367,7 @@ double minCV_costChange (
 
     /* proposed new sample size for Hi */
     nhSizeHi = (double) sampleSize[Hi];// - size[i]; 
-
-/*
-    printf("Proposed Var[%d][%d] = %f\n", (int) d, (int) Hj,  
-        (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] ) / 
-        ((NhSizeHj - 1) * NhSizeHj ) 
-        ); 
     
-    printf("Proposed Var[%d][%d] = %f\n", (int) d, (int) Hi,  
-        (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] ) / 
-        ((NhSizeHi - 1)  * NhSizeHi) 
-        );
-*/
-
     /* get the distance between */
     R[d] =
       sqrt( fixedVar + 
@@ -423,19 +378,6 @@ double minCV_costChange (
         ( (NhSizeHi - 1) * (nhSizeHi) ) * NhSizeHi 
       ) / Total[d] - T[d];
 
-#ifdef DEBUG 
-    Rprintf("%d:\tR[%d] = %f, Q[%d] = %f, R[%d]+T[%d]=%f, Q[%d]+T[%d]=%f\n", 
-        (int) d,
-        (int) d, R[d], 
-        (int) d, Q[d], 
-        (int) d, (int) d, R[d] + T[d], 
-        (int) d, (int) d, Q[d]+T[d]);
-#endif
-
-/*    if( R[d] - Q[d] == 0 ) printf("R[d] - Q[d] == 0\n");
-    if( R[d] - Q[d] < 0 )  printf("R[d] - Q[d] < 0\n");
-    if( R[d] - Q[d] > 0 )  printf("R[d] - Q[d] > 0\n");
-*/
     /* get the max change in CV */
     if( R[d] > 0 ) { 
       if( R[d] - Q[d] > 0 ) {
@@ -444,7 +386,6 @@ double minCV_costChange (
     } 
   }
 
-//  Rprintf("delta=%f\n",delta);
   return(delta);
 }
 
@@ -473,9 +414,9 @@ void minCV_update (
             size_t N    /* number of elements within a state */
             ) { 
   
-  size_t l, Hi, d, h; 
+  size_t l, Hi, d; 
   minCV_adminStructPtr a;
-  double dil, djl, dij; 
+  double dil ; 
 
   if( accept == 0) return;
 
@@ -489,14 +430,12 @@ void minCV_update (
   size_t *   NhSize = a->NhSize;
   size_t *   size = a->size;
   double *   acres = a->acres;
-  double *   sampleSize = a->sampleSize;
   size_t     Hj = a->Hj;
   size_t **  L = a->L;
   size_t     k = a->k;
   size_t     H = a->H;
+  size_t     sampleIter = a->sampleIter;
   double *   x = a->x;
-  double *   T = a->T;
-  double *   Total = a->Total;
   double * prob = a->prob;
   double * probMatrix = a->probMatrix;
   double totalProbability = a->totalProbability;
@@ -574,7 +513,7 @@ void minCV_update (
   NhAcres[Hj] += acres[i];
 
   /* improve the sample size */ 
-  minCV_sampleSizeChange ( A, Q, R, dN, N, 10 );
+  minCV_sampleSizeChange ( A, Q, R, dN, N, sampleIter);
   
   return;
 }
@@ -656,7 +595,9 @@ void * minCV_packSubstrata(
     size[i]  =  (size_t) aInt[i];
     acres[i] =           aDbl[i];
   } 
- 
+
+  /* get the number of iterations to optimize sample size */
+  packedStruct->sampleIter = (size_t) aInt[N];
 
   /* Nh is the size of each label (vector) */
   Nh = minCV_labelTotalPSUs( I, N, H);
@@ -827,8 +768,6 @@ void minCV_diag(
   V = a->V;
   Total = a->Total;
 
-  double * prob = a->prob;
-  double * probMatrix = a->probMatrix;
 
   acres = a->acres;
   size = a->size;

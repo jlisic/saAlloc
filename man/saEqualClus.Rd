@@ -40,28 +40,14 @@ saEqualClus(x, label, iterations=1000, cooling=0, segments=rep(1,nrow(x)), PSUAc
     Acceptable difference between PSUacres.
   }
 }
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
 \value{
   \item{accept}{ Matrix with three columns and a row for each iteration, "change": change in objective function, "U": uniform random variable, "accepted": 1 - accepted, 0 - not accepted }
   \item{cost}{ Objective Function }
   \item{label}{ Final Label }
 }
-\references{
-%% ~put references to the literature/web site here ~
-}
+
 \author{
 Jonathan Lisic <jonathan.lisic@nass.usda.gov> 
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
 # data set with 100 observations and 4 characteristics split between two strata

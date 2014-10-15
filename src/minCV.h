@@ -47,6 +47,7 @@ typedef struct
   double * prob;        /* vector of sampling weights */
   double * probMatrix; /*  matrix of sampling weights , one weight for each stratum */
   double totalProbability; /* current sum of total Probability */ 
+  size_t sampleIter;
   size_t * size;
   size_t * NhSize;
   double acreDif;

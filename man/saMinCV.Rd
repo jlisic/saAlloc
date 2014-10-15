@@ -2,13 +2,13 @@
 \alias{saMinCV}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Minimum CV Strata Formation via Simulated Annealing
+Minimum CV Strata Formation and Allocation via Simulated Annealing
 }
 \description{
-This function exchanges sampling units between strata to minimzie the target CV.
+This function exchanges sampling units between strata to minimzie the target CV, for each accepted exchange a number of iterations are performed to improve the target CV by changing the sample allocation.
 }
 \usage{
-saMinCV (x, label, targetCV, sampleSize, weightMatrix, iterations=1000, cooling=0, segments=rep(1,nrow(x)), PSUAcres=rep(1,nrow(x)), targetVarWithin=rep(0,ncol(x)))
+saMinCV (x, label, targetCV, sampleSize, weightMatrix, iterations=1000, sampleIterations=100, cooling=0, segments=rep(1,nrow(x)), PSUAcres=rep(1,nrow(x)), targetVarWithin=rep(0,ncol(x)))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -30,8 +30,11 @@ saMinCV (x, label, targetCV, sampleSize, weightMatrix, iterations=1000, cooling=
   \item{iterations}{
   Number of iterations to perform of the Simulated Annealing procedure.
   }
+  \item{sampleIterations}{
+  Number of iterations to perform on minimizing the sample Allocation (0 = no changes).
+  }
   \item{cooling}{
-  Cooling Schedule (0 = exchange only).
+  Cooling Schedule (0 = exchange only, as of this release only exchange is supported).
   }
   \item{segments}{
   If prior clustering is performed to form sampling units, this allows 
@@ -43,30 +46,15 @@ saMinCV (x, label, targetCV, sampleSize, weightMatrix, iterations=1000, cooling=
   If prior clustering is performed and assumed constant across the population then it can be handled here.
   }
 }
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
 \value{
   \item{accept}{ Matrix with three columns and a row for each iteration, "change": change in objective function, "U": uniform random variable, "accepted": 1 - accepted, 0 - not accepted }
   \item{cost}{ Objective Function }
   \item{label}{ Final Label }
   \item{sampleSize}{ Final Sample Size }
 }
-\references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-  Jonathan Lisic <jonathan.lisic@nass.usda.gov>
-}
-\note{
-%%  ~~further notes~~
-}
 
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
-}
 \examples{
 
 # data set with 100 observations and 4 characteristics split between two strata
