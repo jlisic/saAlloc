@@ -5,7 +5,8 @@
 Optimal Equal Sized Strata Formation and Allocation via Simulated Annealing 
 }
 \description{
-This function minimizes the sample size for a fixed set of target variances by moving sampling units between strata.
+This function minimizes the sample size for a fixed set of target variances by
+moving sampling units between strata.
 }
 \usage{
 saEqualClus(
@@ -23,7 +24,8 @@ saEqualClus(
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{x}{
-  A matrix where each row is a sampling unit and each column is a characteristic of the sampling unit that is to be reduced in optimal sampling size.
+  A matrix where each row is a sampling unit and each column is a characteristic
+  of the sampling unit that is to be reduced in optimal sampling size.
   }
   \item{label}{
   Initial stratum assignment.
@@ -44,14 +46,19 @@ saEqualClus(
 %%     ~~Describe \code{targetVar} here~~
 }
   \item{targetVarWithin}{
-  If prior clustering is performed and assumed constant across the population then it can be handled here.
+  If prior clustering is performed and assumed constant across the population
+  then it can be handled here.
   }
   \item{tolSize}{
     Acceptable difference between PSUacres.
   }
 }
 \value{
-  \item{accept}{ Matrix with three columns and a row for each iteration, "change": change in objective function, "U": uniform random variable, "accepted": 1 - accepted, 0 - not accepted }
+  \item{accept}{ Matrix with three columns and a row for each iteration, 
+      "change": change in objective function, 
+      "U": uniform random variable, 
+      "accepted": 1 - accepted, 
+                  0 - not accepted }
   \item{cost}{ Objective Function }
   \item{label}{ Final Label }
 }

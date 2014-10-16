@@ -6,8 +6,9 @@
 Optimal allocation of sampling units to form strata using simulated annealing 
 }
 \description{
-Description: This program performs optimal allocation of sampling units to a set of strata via simulated annealing.  
-Constraints on maximum relative distance between stratum sizes are supported. 
+Description: This program performs optimal allocation of sampling units to a 
+set of strata via simulated annealing.  Constraints on maximum relative 
+distance between stratum sizes are supported. 
 }
 \details{
 \tabular{ll}{
@@ -18,9 +19,13 @@ Date: \tab 2014-07-28\cr
 License: \tab Public Domain\cr
 }
  
-saMinCV: currently exchange only, uses an exchange algorithm to form strata from a set of PSU's and simultaneously updated the allocation at each iteration. 
+saMinCV: currently exchange only, uses an exchange algorithm to form strata 
+  from a set of PSU's and simultaneously updated the allocation at each 
+  iteration. 
 
-saEqualClus: allocate a set of observations to target strata based on minimizing total sample size based on a set of target variances (for fixed size strata only).
+saEqualClus: allocate a set of observations to target strata based on minimizing
+  total sample size based on a set of target variances (for fixed size strata 
+  only).
 
 }
 \author{
