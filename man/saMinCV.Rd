@@ -6,8 +6,9 @@ Minimum CV Strata Formation and Allocation via Simulated Annealing
 }
 \description{
 This function exchanges sampling units between strata to minimzie the target CV,
-for each accepted exchange a number of iterations are performed to improve the 
-target CV by changing the sample allocation.
+every few steps (as determined by sampleUpdateIterations) a number of 
+iterations are performed to improve the target CV by changing the sample 
+allocation.
 }
 \usage{
 saMinCV(
@@ -18,6 +19,7 @@ saMinCV(
      weightMatrix, 
      iterations=1000, 
      sampleIterations=100, 
+     sampleUpdateIterations=100,
      cooling=0, 
      segments=rep(1,nrow(x)), 
      PSUAcres=rep(1,nrow(x)), 
@@ -50,12 +52,15 @@ saMinCV(
   Number of iterations to perform of the Simulated Annealing procedure.
   }
   \item{sampleIterations}{
-  Number of iterations to perform on minimizing the sample Allocation 
+  Number of iterations for each sample Allocation update step
   (0 = no changes).
   }
+  \item{sampleUpdateIterations}{
+  Number of iterations to wait until performing the sample update step 
+  (0 = every iteration).
+  }
   \item{cooling}{
-  Cooling Schedule (0 = exchange only, as of this release only exchange is 
-  supported).
+  Cooling Schedule (0 = exchange only)
   }
   \item{segments}{
   If prior clustering is performed to form sampling units, this allows 
@@ -79,11 +84,11 @@ saMinCV(
   \item{sampleSize}{ Final Sample Size }
 }
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \examples{
 
-# data set with 100 observations and 4 characteristics split between two strata
+# data set with 100 observations and four 
+# characteristics split between two strata
 x <- matrix(rnorm( 100*4 ),ncol=4)  
 
 # create an initial set of strata assignments 
@@ -100,10 +105,16 @@ b <- saMinCV(
 
 # compare results
 print("before CV")
-print( sqrt(colSums(50*aggregate(x,by=list(label),var))[-1]) / colSums(x) )
+print( sqrt(
+  colSums(
+    50*aggregate(x,by=list(label),var)
+    )[-1]) / colSums(x) )
 
 print("Min CV")
-print( sqrt(colSums(50*aggregate(x,by=list(b$label),var))[-1]) / colSums(x) )
+print( sqrt(
+  colSums(
+    50*aggregate(x,by=list(b$label),var)
+    )[-1]) / colSums(x) )
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

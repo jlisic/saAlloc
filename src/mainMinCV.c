@@ -35,77 +35,49 @@ void R_minCV (
       int * ANDblInt,  /* number of integer admin recors         1      */
       int * dup,       /* UNTESTED/UNUSED dup vector             n      */
       double * costChangeDbl, /* (costChange,T) per item          iter * 3 */
-      double * doubleSampleSize   /* output sample size */
+      double * doubleSampleSize,   /* output sample size */
+      int * auxFunctionIterInt /* how often to run the auxiliary function 1 */
     ) { 
   
   /* note that we get ints from R and we want to work with size_t, which are not the same for most systems */ 
-  size_t N;                          /* number of items                       */
-  size_t dN;                         /* sets of number of items               */ 
-  size_t k;                          /* the length of each vector in x        */ 
-  size_t iter;                       /* the number of iterations              */ 
-  size_t * I;                        /* initial assignment                    */
-  size_t * J;                        /* final assignment                      */
-  double * R;                        /* objective function value returned     */
-  double * D;                        /* distance matrix                       */
- 
-  void * A;                          /* app specific administrative data      */
-  size_t ANInt;
-  size_t ANDbl;
-
   size_t i;
 
-  size_t * size;
-
   /* make size_t transfers */
-  k = (size_t) *kInt;
-  dN = (size_t) *dInt;
-  N = (size_t) *NInt;
-  iter = (size_t) * iterInt;
-  ANInt = (size_t) * ANIntInt;
-  ANDbl = (size_t) * ANDblInt;
+  size_t k = (size_t) *kInt;    /* vector size for each distance matrix */
+  size_t dN = (size_t) *dInt;   /* number of distance matricies */
+  size_t N = (size_t) *NInt;    /* number of vectors (obs) */
+  size_t iter = (size_t) * iterInt; /* number of iterations fo the algorithm */
+  size_t auxFunctionIter = (size_t) *auxFunctionIterInt; /* run the auxiliary update program this often */
+  size_t ANInt = (size_t) * ANIntInt;
+  size_t ANDbl = (size_t) * ANDblInt;
+  
+  double * D = NULL;
+
   /***** 0.2 ASSIGN OUR MEMORY *****/
 
-  I          = (size_t * ) malloc(sizeof(size_t) * N );
-
-  /* copy over some data */
-  for( i=0; i < N; i++) 
-    I[i] = (size_t) IInt[i];
+  size_t * I = malloc(sizeof(size_t) * N );
+  size_t * J = malloc(sizeof(size_t) * N );
   
-  J          = (size_t * ) malloc(sizeof(size_t) * N );
+  /* copy over some data */
+  for( i=0; i < N; i++) I[i] = (size_t) IInt[i];
 
-  R          = (double * ) malloc(sizeof(double) * (dN +1) );
+  /* objective function value returned     */
+  double * R  =  malloc(sizeof(double) * (dN +1) );
+ 
+
   for( i = 0; i < dN +1; i++) R[i] = 0;
 
 
   /***** 0.3 MAKE INITIAL ASSIGNMENT *****/
   
-  /* create a distance matrix */
-
-
-  /* created to take care of the convert issue */ 
-  size          = (size_t * ) malloc(sizeof(size_t) * N );
-
-  for( i=0; i < N; i++) size[i] =  (size_t) adminDataInt[i];
-
-  //D = createDistMatrix( x, k, dN, N, squaredEuclidianMeanDist, size ); 
-  D = NULL;
  
-  free(size);
 
-
-#ifdef DEBUG
-  i = 0;
-  while( i < dN) 
-  {
-    printDistMatrix( D, i, N );
-    i++;
-  }
-#endif
-
- 
   Rprintf("Creating Data Set\n"); 
+ 
 
-  A = minCV_packSubstrata(I,D,x,adminDataInt, adminDataDbl, dN,N,k, ANInt, ANDbl); 
+  /* app specific administrative data      */
+  void * A = minCV_packSubstrata(I,D,x,adminDataInt, adminDataDbl, dN,N,k, ANInt, ANDbl); 
+  
   /***** 1.0 RUN OUR ALGORITHM  *****/
 
   Rprintf("Starting Run\n");
@@ -121,6 +93,7 @@ void R_minCV (
     dN,                      // number of distance matricies                  //
     N,                       // number of elements within a state             //
     iter,                       // max number of iterations                      //
+    auxFunctionIter,
     minCV_init,          // init function                                 //
     minCV_randomState,
     minCV_costChange,    // cost change function                          //
@@ -132,21 +105,18 @@ void R_minCV (
   /***** 2.0 WRITE RESULTS *****/
 
   /* copy index back */
-  for( i=0; i < N; i++) 
-    IInt[i] = (int) I[i];
+  for( i=0; i < N; i++) IInt[i] = (int) I[i];
 
   /* copy sample size back */
   minCV_adminStructPtr a = (minCV_adminStructPtr) A; 
   size_t H = a->H;
   double * sampleSize = a->sampleSize;
 
-  for( i = 0; i < H; i++)  
-    doubleSampleSize[i] = sampleSize[i];
+  for( i = 0; i < H; i++)  doubleSampleSize[i] = sampleSize[i];
 
   /* clean up */
   free(I);
   free(J);
-  //free(D);
   free(R);
 
 

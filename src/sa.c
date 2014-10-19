@@ -22,6 +22,7 @@ double * sa(
     size_t dN,               /* number of distance matricies                  */
     size_t N,                /* number of elements within a state             */
     size_t m,                /* max number of iterations                      */
+    size_t auxFunctionIter,  /* how often to run the auxiliar update function */
     initFunctionPtr initSAFunction,  /* initialize function                           */
     randomStateFunctionPtr randomStateSAFunction,
     costChangeFunctionPtr costChangeFunction,
@@ -40,35 +41,25 @@ double * sa(
 
 
   /* take care of R random number generator */
-#ifdef CLI 
-  set_seed(1,1); 
-  costChange = (double *) malloc(sizeof(double) * m * 3);
-#endif
-
-#ifndef CLI
   GetRNGstate();
-#endif
   i = 0;
 
   /* initialize the algorithm */
   initSAFunction( I, Q, D, A, dN, N);
  
 
-  #ifndef CLI
-    Rprintf("\n****************** init ****************\n");
-  #endif 
-  #ifdef CLI
-    printf("\n****************** init ****************\n");
-  #endif 
+  Rprintf("\n****************** init ****************\n");
   diagFunction(i,I,Q,A,dN,N);
  
-  while( i < m ) 
-  {
-    if( i % 100 == 0) Rprintf("iter: %d\n",(int) i);
+  while( i < m ) {
+    /* print status every 1000th */ 
+    if( i % (m/1000) == 0) Rprintf("iter: %d\% \r",(int) ( i*100 )/(m-1) );
+    
+    /* run a generic update function */ 
+    if( i % auxFunctionIter == 0) updateFunction(2, newI, I, Q, J, R, D, A, dN, N);   
 
     // 1. select a potential move t_{i+1} 
     newI = randomStateSAFunction( I, Q, J, R, D, A, dN, N);
-
 
     /* if there are no possible movements we terminate */
     if( newI > N ) return( costChange ); 
@@ -78,92 +69,40 @@ double * sa(
     costChange[i*3+1] = -1;
     costChange[i*3+2] = 0;
 
-
-#ifdef DEBUG3 
-    Rprintf("\ndelta=%f,", newCostChange);
-#endif
-
-#ifdef DEBUG2 
-    Rprintf("\n****************** post cost change  ****************\n");
-    diagFunction(i,I,Q,A,dN,N);
-#endif
-
     /* 2. if the move improves the objective function then s_{i+1} = t_{i+1} */
-    if( newCostChange <= 0 )
-    {
-      costChange[i*3+2] = 1;
-#ifdef DEBUG
-      printf("Accepted\t");
-#endif
+    if( newCostChange <= 0 ) {
 
+      costChange[i*3+2] = 1;
       updateFunction(1, newI, I, Q, J, R, D, A, dN, N);   
-#ifdef DEBUG2
-      Rprintf("\n****************** post accepted update  ****************\n");
-      diagFunction(i,I,Q,A,dN,N);
-#endif
-    }
-    else {
+
+    } else {
 
       T = coolFunction( i, newCostChange, newI, I, Q, D, A, dN, N);   
-#ifndef CLI
       U = runif(0.0,1.0); 
-#endif
-#ifdef CLI
-      U = (double) rand() / (double) RAND_MAX; 
-#endif
+      
       costChange[i*3+1] = U;
       
-#ifdef DEBUG
-      printf("Non-optimal, T = %f, U = %f:  ", T, U);
-#endif     
       /* 3. else if the Pr( U < T( i ) ), for a random variate U then s_{i+1} = t_{i+1} */
-      if( U < T ) 
-      {
-#ifdef DEBUG
-        printf("Accepted\t");
-#endif
+      if( U < T ) {
+
         costChange[i*3+2] = 1;
         updateFunction(1, newI, I, Q, J, R, D, A, dN, N);   
-#ifdef DEBUG
-        printf("\n****************** post accepted update non-opt  ****************\n");
-        diagFunction(i,I,Q,A,dN,N);
-#endif
-      } 
-      else
-      {
-#ifdef DEBUG
-        printf("Not Accepted\t");
-#endif
-      }  
+
+      } else { }  
       /* 4. else s_{i+1} = s_{i} */
       updateFunction(0, newI, I, Q, J, R, D, A, dN, N);   
-#ifdef DEBUG2
-      Rprintf("\n****************** post accepted update reject  ****************\n");
-      diagFunction(i,I,Q,A,dN,N);
-#endif
 
     }
-
-#ifdef DEBUG  
-  printf("\n************************* i = %d **************************\n",(int) i);
-  for( size_t ii=0; ii < N; ii++) printf("\n I[%d]: %d", (int) ii, (int) I[ii] ); 
-#endif
-
+      
 
     /* 6. ommitted, it is implemented as the while loop */ 
     /* 6. else goto 1 */
-#ifdef DEBUG2
-  Rprintf("\n");
-#endif
 
 
     i++; 
   } 
   
-
-#ifndef CLI
   PutRNGstate();
-#endif
 
   diagFunction(i,I,Q,A,dN,N);
 
@@ -192,26 +131,11 @@ void printMatrixFullDbl(double ** X , size_t row, size_t col ) {
   size_t i,j;
 
   for(i = 0; i < row; i++) {
-    #ifndef CLI 
     Rprintf("%d:\t",(int) i);
-    #endif 
-    #ifdef CLI
-    printf("%d:\t",(int) i);
-    #endif
     for(j = 0; j < col; j++) {
-      #ifndef CLI 
       Rprintf("%0.4f\t",X[i][j]);
-      #endif 
-      #ifdef CLI
-      printf("%0.4f\t",X[i][j]);
-      #endif
     }
-    #ifndef CLI 
     Rprintf("\n");
-    #endif 
-    #ifdef CLI
-    printf("\n");
-    #endif
   }
 
 }
@@ -222,26 +146,11 @@ void printMatrixFullSize_t(size_t ** X , size_t row, size_t col ) {
   size_t i,j;
 
   for(i = 0; i < row; i++) {
-    #ifndef CLI 
     Rprintf("%d:\t",(int) i);
-    #endif 
-    #ifdef CLI
-    printf("%d:\t",(int) i);
-    #endif
     for(j = 0; j < col; j++) {
-      #ifndef CLI 
       Rprintf("%d\t",(int) X[i][j]);
-      #endif 
-      #ifdef CLI
-      printf("%d\t",(int) X[i][j]);
-      #endif
     }
-    #ifndef CLI 
     Rprintf("\n");
-    #endif 
-    #ifdef CLI
-    printf("\n");
-    #endif
   }
 
 }

@@ -66,7 +66,7 @@ size_t substrata2_randomState (
 
 
   /* create some space to hold possible moves */
-  possibleMoves = (size_t *) malloc(sizeof(size_t) * H); 
+  possibleMoves = malloc(sizeof(size_t) * H); 
 
   /* get minimum acres */
   minAcres = NhAcres[0];
@@ -91,7 +91,6 @@ size_t substrata2_randomState (
       for( j = 0; j < H; j++) {
         if(Hi == j) continue;
         /* add to possible moves if the move does not violate acre difference */
-//        printf("[%zu] %f,%f\n", j, 1 - (minAcres - acres[i])/( (double) (NhAcres[j] + acres[i] )) , acreDif ); 
         if((1 - (minAcres - acres[i])/( NhAcres[j] + acres[i] )) < acreDif ) {
           possibleMoves[k]=j;
           k++;
@@ -101,7 +100,6 @@ size_t substrata2_randomState (
       for( j = 0; j < H; j++) {
         if(Hi == j) continue;
         /* add to possible moves if the move does not violate acre difference */
-//        printf("[%zu] %f,%f\n", j, 1 - minAcres/( (double) (NhAcres[j] + acres[i]) ) , acreDif ); 
         if((1 - minAcres/( NhAcres[j] + acres[i] )) < acreDif ) {
           possibleMoves[k]=j;
           k++;
@@ -111,13 +109,7 @@ size_t substrata2_randomState (
       
 
     if( l > N * H ) {
-      #ifndef CLI
       Rprintf("No Movement Likely Possible, Terminating\n");
-      #endif 
-      #ifdef CLI
-      printf("No Movement Likely Possible, Terminating\n");
-      #endif 
-      
       return(N+1);
     }
     l++;
@@ -169,31 +161,9 @@ double substrata2_costChange (
   /* figure out change in cost */
   Hi = I[i]; 
 
-#ifdef DEBUG
-  printf("\n(%d)\n", (int) i);
-  printf("\n(%d,%d)\n", (int) Hi, (int) Hj);
-#endif
-  
-
 
   /*this calculates psuedo nh's for each stratum*/
   for(d = 0; d < dN; d++) {
-
-//    printf("\nCalc Change %zu ", d);
-
-   //printf("R[%zu] =%f\n",d, R[d]);  
-   /*
-   printf("Q[%zu] =%f\n",d, Q[d]);  
-   printf("V[%zu][%zu] =%f\n",d,Hi, V[d][Hi]);  
-   printf("V[%zu][%zu] =%f\n",d,Hj, V[d][Hj]);  
-   printf("T[%zu] =%f\n",d, T[d]);  
-   printf("C[%zu][%zu][%zu] =%f\n",d,i,Hi, C[d][i][Hi]);  
-   printf("C[%zu][%zu][%zu] =%f\n",d,i,Hj, C[d][i][Hj]);  
-   printf("size[%zu] =%zu\n",i, size[d]);  
-   printf("NhSize[%zu] =%zu\n",Hi, NhSize[Hi]);  
-   printf("NhSize[%zu] =%zu\n",Hj, NhSize[Hj]);  
-   */
-   
 
     /* get the distance between */
     R[d] = 
@@ -223,7 +193,7 @@ double substrata2_costChange (
 
 /* update from change in i function */
 void substrata2_update (
-            size_t accept, /* 1 if accepted 0 if not */
+            size_t accept, /* 1 if accepted 0 if not, 2 for aux function */
             size_t i,   /* new Index */
             size_t * I, /* current state */
             double * Q, /* current cost */
@@ -234,6 +204,9 @@ void substrata2_update (
             size_t dN,  /* number of distance matricies */
             size_t N    /* number of elements within a state */
             ) { 
+  
+  if( accept == 0) return;
+  if( accept == 2) return;
   
   size_t j, k, Hi, Hj, d; 
   substrata2_adminStructPtr a;
@@ -247,7 +220,6 @@ void substrata2_update (
   double dik;
 /*  double dik, djk; */
    
-  if( accept == 0) return;
 
   /* cast A back to somethine useable */
   a = (substrata2_adminStructPtr) A; 
@@ -266,10 +238,6 @@ void substrata2_update (
   
   /* update the strata assignment */
   I[i] = Hj;
-
-#ifdef DEBUG2
-  printf(" Hi = %d, Hj = %d, i = %d, j = %d ",(int) Hi,(int) Hj, (int) i, (int) j); 
-#endif
 
   if(Hi == Hj) return; 
 
@@ -297,7 +265,6 @@ void substrata2_update (
    for( k = 0; k < N; k++){
     
       dik = getDist(i,k,D,d,N); 
-      /*djk = getDist(j,k,D,d,N); */ 
 
      /* Hj is j's old index */
      C[d][k][Hj] =  C[d][k][Hj] + dik; 
@@ -330,14 +297,10 @@ double substrata2_cool (
             size_t N    /* number of elements within a state */
             )  { 
 double temp;
-  substrata2_adminStructPtr a;
-  
-  a = (substrata2_adminStructPtr) A;
+  substrata2_adminStructPtr a = (substrata2_adminStructPtr) A;
+
   temp = a->temp;
 
-  /*printf("(i,t,d): %d\t %f\t %f\n",(int) iter, temp, diff);*/
-
-  /*return( exp( (log(1+iter)) * diff /  (-1* temp) ) ); */ 
   return( exp( (1+iter) * diff /  (-1* temp) ) ) ; 
 }  
 
@@ -370,15 +333,14 @@ void * substrata2_packSubstrata(
   double * W;     /* Within Variance */
   double ** V;    /* Matrix of Variance, [Commodity][strata] */ 
 
-  size_t * size;  /* number of assumed segments in a psu */
-  double * acres; /* acres for each psu */
 
-
-  substrata2_adminStructPtr packedStruct;
+  /* allocate struct */
+  substrata2_adminStructPtr packedStruct = 
+    malloc( sizeof( substrata2_adminStruct ) ); 
 
   /* created to take care of the convert issue */ 
-  size          = (size_t * ) malloc(sizeof(size_t) * N );
-  acres          = (double * ) malloc(sizeof(size_t) * N );
+  size_t * size   =  calloc(N, sizeof(size_t) );
+  double * acres  =  calloc(N, sizeof(double ) );
 
   for( i=0; i < N; i++) 
   {
@@ -395,17 +357,6 @@ void * substrata2_packSubstrata(
   /* NhSize is the total number of segments (vector) */
   NhSize = substrata2_labelTotalSegments( I, N, H, size);
 
-  /*
-  printf("\n Obs: %zu", N);
-  printf("\n Vars: %zu", dN);
-  printf("\n H: %zu",H); 
-
- printf("\nNhSize: ");
-  for( i = 0; i < H; i++)
-    printf(" %d ", (int) NhSize[i]);
-  printf("\n");
-   */
-
   /* NhSize is the total number of segments (vector) */
   NhAcres = substrata2_labelTotalAcres( I, N, H, acres);
   
@@ -421,21 +372,18 @@ void * substrata2_packSubstrata(
   C = substrata2_createContribMatrix( I, dN, N, H, D, L, Nh);
   
   /* get target variance values */
-  T = (double *) malloc( sizeof( double ) * dN );
+  T = malloc( sizeof( double ) * dN );
   for( i =0; i < dN; i++) 
     T[i] = aDbl[N + i]; 
  
   /* within variation */ 
-  W = (double *) malloc( sizeof( double ) * dN );
+  W = malloc( sizeof( double ) * dN );
   for( i =0; i < dN; i++) 
     W[i] = aDbl[N + dN + i]; 
    
   /* create variance matrix for each [commodity][strata] */
   V = substrata2_createVarMatrix( I, dN, N, H, D, L, Nh, NhSize);
   
-  /* allocate struct */
-  packedStruct = 
-    (substrata2_adminStructPtr) malloc( sizeof( substrata2_adminStruct ) ); 
 
   /* make assignments to struct */
   packedStruct->H = H;
@@ -453,8 +401,6 @@ void * substrata2_packSubstrata(
   packedStruct->temp = aDbl[NDbl-2];
   packedStruct->acreDif = aDbl[NDbl-1 ];
   
-  //printf("\nPacking\n Temp = %f Acre dif = %f", packedStruct->temp, packedStruct->acreDif);
-
   return( (void *) packedStruct );
 }
 
@@ -539,15 +485,6 @@ void substrata2_diag(
   Rprintf("\n************************* i = %d **************************\n",(int) i);
   Rprintf("\nNhMax: %d\n", (int) NhMax);
 
-  /*
-  for( d =0; d < dN; d++) 
-    printf("\nC[%d]\n",(int) d),
-    printMatrixFullDbl(C[d], N, H ); 
-  
-  printf("\nI,size,acres\n");
-  for( d =0; d < N; d++) 
-    printf("%d:  %d  %d  %f\n",(int) d, (int) I[d], (int) size[d], acres[d]); 
- */
   
   Rprintf("\nQ\n");
   for( d =0; d < dN; d++) 
@@ -710,10 +647,10 @@ size_t ** substrata2_labelCreateMaster( size_t * label, size_t N, size_t H, size
   size_t ** L;
 
   /* allocate memory for InTo matrix */
-  L = (size_t **) malloc(sizeof(size_t * ) * H );
+  L = malloc( sizeof(size_t * ) * H );
 
   for( i = 0; i < H; i ++) {
-    L[i] = (size_t *) malloc(sizeof(size_t) * NhMax );
+    L[i] = malloc( sizeof(size_t) * NhMax );
   }
 
   /* set default */
@@ -747,14 +684,14 @@ double *** substrata2_createContribMatrix( size_t * label, size_t dN, size_t N, 
   double *** C;
 
   /* allocate memory for C matrix */
-  C = (double ***) malloc(sizeof(double ** ) * dN );
+  C = malloc(sizeof(double ** ) * dN );
 
   for( i = 0; i < dN; i ++)
   {
-    C[i] = (double **) malloc(sizeof(double * ) * N );
+    C[i] = malloc(sizeof(double * ) * N );
 
     for( j = 0; j < N; j ++) {
-      C[i][j] = (double *) malloc(sizeof(double) * H );
+      C[i][j] = malloc(sizeof(double) * H );
     }
   }
 
@@ -780,10 +717,10 @@ double ** substrata2_createVarMatrix( size_t * label, size_t dN, size_t N, size_
   double ** V;
 
   /* allocate memory for C matrix */
-  V = (double **) malloc(sizeof(double * ) * dN );
+  V = malloc(sizeof(double * ) * dN );
 
 
-  for( i = 0; i < dN; i++) V[i] = (double *) malloc(sizeof(double) * H );
+  for( i = 0; i < dN; i++) V[i] = malloc(sizeof(double) * H );
 
   /* aggregate */
   for( i = 0; i < dN; i++)

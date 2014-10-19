@@ -7,6 +7,7 @@ function(
   weightMatrix,            # missing handled
   iterations=1000,
   sampleIterations=100,
+  sampleUpdateIterations=100,
   cooling=0,
   segments=rep(1,nrow(x)),
   PSUAcres=rep(1,nrow(x)),
@@ -67,6 +68,11 @@ function(
   # get total 
   total <- colSums(x)
   
+  #################### SAMPLE SIZE ######################################
+  
+  if(sampleUpdateIterations < 0 ) stop("sampleUpdateIter is not positive") 
+  if( round(sampleUpdateIterations) != sampleUpdateIterations ) stop("sampleUpdateIter is not an integer ") 
+   
   
   #################### OPTIMAL SAMPLE SIZE ######################################
   
@@ -132,7 +138,8 @@ r.result <- .C("R_minCV",
   as.integer(adminDblLength), #checked      11
   as.integer(dup),            #checked      12
   as.double(acceptRate),      #checked      13
-  as.double(sampleSize)       #checked      14
+  as.double(sampleSize),      #checked      14
+  as.integer(sampleUpdateIterations)
 )
 
   print("C running time")

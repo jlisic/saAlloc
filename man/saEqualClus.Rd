@@ -67,7 +67,8 @@ saEqualClus(
 Jonathan Lisic <jonathan.lisic@nass.usda.gov> 
 }
 \examples{
-# data set with 100 observations and 4 characteristics split between two strata
+# data set with 100 observations and four characteristics 
+# split between two strata
 x <- matrix(rnorm( 100*4 ),ncol=4)  
 
 # create an initial set of strata assignments 

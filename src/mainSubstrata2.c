@@ -33,73 +33,52 @@ void R_substrata2 (
       int * ANIntInt,  /* number of double admin recordds        1      */
       int * ANDblInt,  /* number of integer admin recors         1      */
       int * dup,       /* UNTESTED/UNUSED dup vector             n      */
-      double * costChangeDbl /* (costChange,T) per item          iter * 2 */
+      double * costChangeDbl, /* (costChange,T) per item          iter * 2 */
+      int * auxFunctionIterInt /* how often to run the auxiliary function 1 */
     ) { 
   
   /* note that we get ints from R and we want to work with size_t, which are not the same for most systems */ 
-  size_t N;                          /* number of items                       */
-  size_t dN;                         /* sets of number of items               */ 
-  size_t k;                          /* the length of each vector in x        */ 
-  size_t iter;                       /* the number of iterations              */ 
-  size_t * I;                        /* initial assignment                    */
-  size_t * J;                        /* final assignment                      */
-  double * R;                        /* objective function value returned     */
-  double * D;                        /* distance matrix                       */
- 
-  void * A;                          /* app specific administrative data      */
-  size_t ANInt;
-  size_t ANDbl;
-
   size_t i;
 
-  size_t * size;
-
   /* make size_t transfers */
-  k = (size_t) *kInt;
-  dN = (size_t) *dInt;
-  N = (size_t) *NInt;
-  iter = (size_t) * iterInt;
-  ANInt = (size_t) * ANIntInt;
-  ANDbl = (size_t) * ANDblInt;
-
+  size_t k = (size_t) *kInt;    /* vector size for each distance matrix */
+  size_t dN = (size_t) *dInt;   /* number of distance matricies */
+  size_t N = (size_t) *NInt;    /* number of vectors (obs) */
+  size_t iter = (size_t) * iterInt; /* number of iterations fo the algorithm */
+  size_t auxFunctionIter = (size_t) *auxFunctionIterInt; /* run the auxiliary update program this often */
+  size_t ANInt = (size_t) * ANIntInt;
+  size_t ANDbl = (size_t) * ANDblInt;
 
   /***** 0.2 ASSIGN OUR MEMORY *****/
 
-  I          = (size_t * ) malloc(sizeof(size_t) * N );
+  size_t * I = malloc(sizeof(size_t) * N );
+  size_t * J = malloc(sizeof(size_t) * N );
 
   /* copy over some data */
-  for( i=0; i < N; i++) 
-    I[i] = (size_t) IInt[i];
-  J          = (size_t * ) malloc(sizeof(size_t) * N );
+  for( i=0; i < N; i++) I[i] = (size_t) IInt[i];
 
 
-  R          = (double * ) malloc(sizeof(double) * dN );
+
+  double * R = malloc( sizeof(double) * dN );
 
   /***** 0.3 MAKE INITIAL ASSIGNMENT *****/
   
-  /* create a distance matrix */
-
 
   /* created to take care of the convert issue */ 
-  size          = (size_t * ) malloc(sizeof(size_t) * N );
+  size_t * size = malloc(sizeof(size_t) * N );
 
   for( i=0; i < N; i++) size[i] =  (size_t) adminDataInt[i];
 
-  D = createDistMatrix( x, k, dN, N, squaredEuclidianDist, size ); 
+  /* create distance matrix */
+  double * D = createDistMatrix( x, k, dN, N, squaredEuclidianDist, size ); 
  
   free(size);
+  
+  
+  /* app specific administrative data      */
+  void * A = substrata2_packSubstrata(I,D,adminDataInt, adminDataDbl, dN,N, ANInt, ANDbl); 
 
 
-#ifdef DEBUG
-  i = 0;
-  while( i < dN) 
-  {
-    printDistMatrix( D, i, N );
-    i++;
-  }
-#endif
-
-  A = substrata2_packSubstrata(I,D,adminDataInt, adminDataDbl, dN,N, ANInt, ANDbl); 
   /***** 1.0 RUN OUR ALGORITHM  *****/
 
    sa( 
@@ -113,6 +92,7 @@ void R_substrata2 (
     dN,                      // number of distance matricies                  //
     N,                       // number of elements within a state             //
     iter,                       // max number of iterations                      //
+    auxFunctionIter,
     substrata2_init,          // init function                                 //
     substrata2_randomState,
     substrata2_costChange,    // cost change function                          //

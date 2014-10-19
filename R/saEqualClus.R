@@ -41,13 +41,6 @@ function(
   
   dup <- c() 
 
-  print(k)
-  print(d)
-  print(n)
-  print(adminIntLength)
-  print(adminDblLength)
-
-  print(cost)
   
 r.result <- .C("R_substrata2",
   as.double(c(x)),      #checked
@@ -62,7 +55,8 @@ r.result <- .C("R_substrata2",
   as.integer(adminIntLength), #checked
   as.integer(adminDblLength), #checked
   as.integer(dup),        #checked
-  as.double(acceptRate)   #checked 
+  as.double(acceptRate),   #checked 
+  as.integer(iterations)   # needed but not used
 )
 
   print("C running time")

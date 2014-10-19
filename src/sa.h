@@ -2,10 +2,6 @@
 #define HEADER_SA
 /*** headers  ***/
 
-#ifdef CRAZY
-#define DEBUG
-#define DEBUG2
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -121,6 +117,7 @@ double *  sa(
     size_t dN,               /* number of distance matricies                  */
     size_t N,                /* number of elements within a state             */
     size_t m,                /* max number of iterations                      */
+    size_t auxFunctionIter,  /* how often to run the auxiliar update function */
     initFunctionPtr initSAFunction,  /* initialize function                           */
     randomStateFunctionPtr randomStateSAFunction, /* random state function */
     costChangeFunctionPtr costChangeFunction,

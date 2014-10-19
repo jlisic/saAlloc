@@ -3,7 +3,7 @@
 \alias{saAlloc}
 \docType{package}
 \title{
-Optimal allocation of sampling units to form strata using simulated annealing 
+Optimal Allocation of Sampling Units to Form Strata Using Simulated Annealing 
 }
 \description{
 Description: This program performs optimal allocation of sampling units to a 
