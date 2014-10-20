@@ -124,7 +124,8 @@ void minCV_update (
             double * D, /* distance matrix */
             void * A,   /* administrative data */
             size_t dN,  /* number of distance matricies */
-            size_t N    /* number of elements within a state */
+            size_t N,   /* number of elements within a state */
+            double * costChange /* cost change */
             );
     
 /* cooling schedule                                                           */

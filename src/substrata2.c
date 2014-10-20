@@ -202,39 +202,36 @@ void substrata2_update (
             double * D, /* distance matrix */
             void * A,   /* administrative data */
             size_t dN,  /* number of distance matricies */
-            size_t N    /* number of elements within a state */
+            size_t N,   /* number of elements within a state */
+            double * costChange /* cost Change */
             ) { 
   
   if( accept == 0) return;
-  if( accept == 2) return;
   
-  size_t j, k, Hi, Hj, d; 
-  substrata2_adminStructPtr a;
-  double *** C;
-  double ** V;
-  size_t * Nh;
-  size_t * NhSize;
-  size_t * size;
-  double * NhAcres;
-  double * acres;
-  double dik;
-/*  double dik, djk; */
-   
-
   /* cast A back to somethine useable */
-  a = (substrata2_adminStructPtr) A; 
-  C = a->C;
-  V = a->V;
-  Nh = a->Nh;
-  NhAcres = a->NhAcres;
-  NhSize = a->NhSize;
-  size = a->size;
-  acres = a->acres;
-  j  = a->j;
+  substrata2_adminStructPtr a = (substrata2_adminStructPtr) A; 
+ 
+  if( accept == 2) {
+    costChange[4] = a->j; /* add on what it is moving to */
+    return;
+  }
+  
+  double dik;
+   
+  /* map data from data structure */ 
+  size_t k, d; 
+  double *** C = a->C;
+  double ** V = a->V;
+  size_t * Nh = a->Nh;
+  size_t * NhSize = a->NhSize;
+  double * NhAcres = a->NhAcres;
+  size_t * size = a->size;
+  double * acres = a->acres;
+  size_t j  = a->j;
 
   /* figure out change in cost */
-  Hi = I[i];
-  Hj = j; 
+  size_t Hi = I[i];
+  size_t Hj = j; 
   
   /* update the strata assignment */
   I[i] = Hj;
@@ -260,11 +257,11 @@ void substrata2_update (
    V[d][Hi] =  (V[d][Hi] - C[d][i][Hi]/(NhSize[Hi]*(NhSize[Hi] - 1))) *
        NhSize[Hi] * (NhSize[Hi] - 1) / ( (NhSize[Hi] - size[i]) * (NhSize[Hi] - size[i] - 1));
   
-
    Q[d] = R[d];
-   for( k = 0; k < N; k++){
+
+   for( k = 0; k < N; k++) {
     
-      dik = getDist(i,k,D,d,N); 
+     dik = getDist(i,k,D,d,N); 
 
      /* Hj is j's old index */
      C[d][k][Hj] =  C[d][k][Hj] + dik; 
@@ -281,6 +278,8 @@ void substrata2_update (
 
   NhAcres[Hi] -= acres[i];
   NhAcres[Hj] += acres[i];
+
+  return;
 }
 
 

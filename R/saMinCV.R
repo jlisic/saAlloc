@@ -38,8 +38,8 @@ function(
   H <- length(unique.label)    # number of strata
 
   # need to re-label
-  acceptRate <- rep(0,3*iterations) 
-  cost <- rep(1,d+1) 
+  acceptRate <- rep(0,5*iterations) 
+  cost <- rep(1,d) 
   
   #################### PROBABILITY ######################################
  
@@ -121,6 +121,8 @@ function(
 
   dup <- c() 
 
+  costChangeSize <- 5 + H + d 
+
 
   #################### RUN C FUNCTION ######################################
   
@@ -139,7 +141,8 @@ r.result <- .C("R_minCV",
   as.integer(dup),            #checked      12
   as.double(acceptRate),      #checked      13
   as.double(sampleSize),      #checked      14
-  as.integer(sampleUpdateIterations)
+  as.integer(sampleUpdateIterations),
+  as.integer(costChangeSize)
 )
 
   print("C running time")
@@ -147,9 +150,19 @@ r.result <- .C("R_minCV",
  
 
   #################### RETURN DATA ######################################
-  
-  a <- matrix(unlist(r.result[13]),ncol=3,byrow=T)
-  colnames(a) <- c( 'change', 'U', 'accepted')
+
+  # get colnames for x 
+  if( is.null(colnames(x)) ) {
+    x.colnames <- sprintf("%d",1:d)
+  } else {
+    x.colnames <- colnames(x)
+  }
+
+  a <- matrix(unlist(r.result[13]),ncol=5 + H + d,byrow=T)
+  colnames(a) <- c( 'change', 'U', 'accepted','from','to', 
+                   sprintf("n_%d",unique.label), 
+                   x.colnames
+                   )
 
   rlabel <- sapply(unlist(r.result[6]), function(x) unique.label[x+1] ) 
 

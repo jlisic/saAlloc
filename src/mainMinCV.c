@@ -34,9 +34,10 @@ void R_minCV (
       int * ANIntInt,  /* number of double admin recordds        1      */
       int * ANDblInt,  /* number of integer admin recors         1      */
       int * dup,       /* UNTESTED/UNUSED dup vector             n      */
-      double * costChangeDbl, /* (costChange,T) per item          iter * 3 */
-      double * doubleSampleSize,   /* output sample size */
-      int * auxFunctionIterInt /* how often to run the auxiliary function 1 */
+      double * costChangeDbl,      /* (costChange,T) per item          iter * 3 */
+      double * doubleSampleSize,   /* output sample size                        */
+      int * auxFunctionIterInt,    /* how often to run the auxiliary function 1 */
+      int * costChangeSizeInt      /* size of a cost change element           1 */
     ) { 
   
   /* note that we get ints from R and we want to work with size_t, which are not the same for most systems */ 
@@ -46,10 +47,11 @@ void R_minCV (
   size_t k = (size_t) *kInt;    /* vector size for each distance matrix */
   size_t dN = (size_t) *dInt;   /* number of distance matricies */
   size_t N = (size_t) *NInt;    /* number of vectors (obs) */
-  size_t iter = (size_t) * iterInt; /* number of iterations fo the algorithm */
+  size_t iter = (size_t) *iterInt; /* number of iterations fo the algorithm */
   size_t auxFunctionIter = (size_t) *auxFunctionIterInt; /* run the auxiliary update program this often */
-  size_t ANInt = (size_t) * ANIntInt;
-  size_t ANDbl = (size_t) * ANDblInt;
+  size_t ANInt = (size_t) *ANIntInt;
+  size_t ANDbl = (size_t) *ANDblInt;
+  size_t costChangeSize = (size_t) *costChangeSizeInt;
   
   double * D = NULL;
 
@@ -94,6 +96,7 @@ void R_minCV (
     N,                       // number of elements within a state             //
     iter,                       // max number of iterations                      //
     auxFunctionIter,
+    costChangeSize,
     minCV_init,          // init function                                 //
     minCV_randomState,
     minCV_costChange,    // cost change function                          //
@@ -118,7 +121,6 @@ void R_minCV (
   free(I);
   free(J);
   free(R);
-
 
 
   /* app specific clean up */ 

@@ -86,7 +86,10 @@ size_t minCV_randomState (
   }
 
   /* if d = dN then all constraints are satisfied */
-  if( d == dN) return(N+1);
+  if( d == dN) {
+    Rprintf("All constraints satisfied, returning early\n");
+    return(N+1);
+  }
 
 
   while( i >= N ) {
@@ -380,8 +383,8 @@ double minCV_costChange (
 
     /* get the max change in CV */
     if( R[d] > 0 ) { 
-      if( R[d] - Q[d] > 0 ) {
-        delta=delta+1.0;
+      if( R[d] - Q[d] > delta ) {
+        delta =R[d] - Q[d];
       }
     } 
   }
@@ -411,7 +414,8 @@ void minCV_update (
             double * D, /* distance matrix */
             void * A,   /* administrative data */
             size_t dN,  /* number of distance matricies */
-            size_t N    /* number of elements within a state */
+            size_t N,   /* number of elements within a state */
+            double * costChange /* cost Change */
             ) { 
   
 
@@ -419,14 +423,33 @@ void minCV_update (
   if( accept == 0) return;
  
 
-  /* improve the sample size */ 
-  minCV_adminStructPtr a = (minCV_adminStructPtr) A; /* cast A back to somethine useable */
+  /* open the data structure and convert it to something useful */
+  minCV_adminStructPtr a = (minCV_adminStructPtr) A; 
+  size_t d;
+  double * sampleSize = a->sampleSize;
+  size_t H = a->H;
+
+  /* record objective function and sample sizes for diagnostics */
   if ( accept == 2) { 
+    /* record what strata the selected PSU is moving to */
+    costChange[4] = a->Hj;
+
+    /* add on sample size */
+    for( d = 0; d < H; d++) costChange[5+d] = sampleSize[d]; 
+    
+    /* add on current obj function */
+    for( d = 0; d < dN; d++) costChange[5 + H +d] = Q[d]; 
+
+    return;
+  }
+  
+  /* optimize sample size */
+  if ( accept == 3) { 
     minCV_sampleSizeChange ( A, Q, R, dN, N, a->sampleIter);
     return;
   }
 
-  size_t l, Hi, d; 
+  size_t l, Hi; 
   double dil ; 
 
   double *** C = a->C;
@@ -440,7 +463,6 @@ void minCV_update (
   size_t     Hj = a->Hj;
   size_t **  L = a->L;
   size_t     k = a->k;
-  size_t     H = a->H;
   double *   x = a->x;
   double * prob = a->prob;
   double * probMatrix = a->probMatrix;

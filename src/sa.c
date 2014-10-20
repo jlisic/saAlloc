@@ -23,15 +23,15 @@ double * sa(
     size_t N,                /* number of elements within a state             */
     size_t m,                /* max number of iterations                      */
     size_t auxFunctionIter,  /* how often to run the auxiliar update function */
-    initFunctionPtr initSAFunction,  /* initialize function                           */
+    size_t costChangeSize,
+    initFunctionPtr initSAFunction,  /* initialize function                   */
     randomStateFunctionPtr randomStateSAFunction,
     costChangeFunctionPtr costChangeFunction,
                              /* cost change function                          */
-    updateFunctionPtr updateFunction,/* update function                               */
-    coolFunctionPtr coolFunction,    /* cooling schedule                              */ 
-    diagFunctionPtr diagFunction     /* diagnostic function                           */ 
-    ) 
-{
+    updateFunctionPtr updateFunction,/* update function                       */
+    coolFunctionPtr coolFunction,    /* cooling schedule                      */ 
+    diagFunctionPtr diagFunction     /* diagnostic function                   */ 
+    )  {
 
   size_t newI = 0;           /* potential index                               */
   size_t i;                  /* iteration index                               */
@@ -53,51 +53,62 @@ double * sa(
  
   while( i < m ) {
     /* print status every 1000th */ 
-    if( i % (m/1000) == 0) Rprintf("iter: %d\% \r",(int) ( i*100 )/(m-1) );
+   // Rprintf("saIter: %d\n", (int) i);
+   
+    if( m > 1 ) 
+        Rprintf("iter: %d, %d \n",  (int)  i, (int) m  );
+      /* if( i % (m/1000) == 0)  */
     
-    /* run a generic update function */ 
-    if( i % auxFunctionIter == 0) updateFunction(2, newI, I, Q, J, R, D, A, dN, N);   
-
+    
     // 1. select a potential move t_{i+1} 
     newI = randomStateSAFunction( I, Q, J, R, D, A, dN, N);
 
     /* if there are no possible movements we terminate */
-    if( newI > N ) return( costChange ); 
+    if( newI > N ) {
+      return( costChange ); 
+    }
 
+    costChange[i * costChangeSize + 1] = -1;
+    costChange[i * costChangeSize + 2] = 0; /* accept */
+    costChange[i * costChangeSize + 3] = newI + 1; /* move from */
+    
     newCostChange = costChangeFunction( newI, I, Q, J, R, D, A, dN, N);
-    costChange[i*3] = newCostChange;
-    costChange[i*3+1] = -1;
-    costChange[i*3+2] = 0;
+    costChange[i * costChangeSize] = newCostChange;
 
     /* 2. if the move improves the objective function then s_{i+1} = t_{i+1} */
     if( newCostChange <= 0 ) {
 
-      costChange[i*3+2] = 1;
-      updateFunction(1, newI, I, Q, J, R, D, A, dN, N);   
+      costChange[i * costChangeSize + 2] = 1;
+      updateFunction(1, newI, I, Q, J, R, D, A, dN, N, NULL);   
 
     } else {
 
       T = coolFunction( i, newCostChange, newI, I, Q, D, A, dN, N);   
       U = runif(0.0,1.0); 
       
-      costChange[i*3+1] = U;
+      costChange[i * costChangeSize + 1] = U;
       
       /* 3. else if the Pr( U < T( i ) ), for a random variate U then s_{i+1} = t_{i+1} */
       if( U < T ) {
 
-        costChange[i*3+2] = 1;
-        updateFunction(1, newI, I, Q, J, R, D, A, dN, N);   
+        costChange[i * costChangeSize + 2] = 1;
+        updateFunction(1, newI, I, Q, J, R, D, A, dN, N, NULL);   
 
       } else { }  
       /* 4. else s_{i+1} = s_{i} */
-      updateFunction(0, newI, I, Q, J, R, D, A, dN, N);   
+      updateFunction(0, newI, I, Q, J, R, D, A, dN, N, NULL );   
 
     }
       
+    /* run a generic update function */ 
+    if( i % auxFunctionIter == 0 ) 
+      updateFunction(3, newI, I, Q, J, R, D, A, dN, N, NULL );   
+     
+    /* update cost change */ 
+    updateFunction(2, newI, I, Q, J, R, D, A, dN, N, &(costChange[i * costChangeSize ]) );   
 
     /* 6. ommitted, it is implemented as the while loop */ 
     /* 6. else goto 1 */
-
 
     i++; 
   } 
@@ -107,7 +118,6 @@ double * sa(
   diagFunction(i,I,Q,A,dN,N);
 
   return( costChange );
-
 }
 
 

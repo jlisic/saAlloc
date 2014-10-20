@@ -34,7 +34,8 @@ void R_substrata2 (
       int * ANDblInt,  /* number of integer admin recors         1      */
       int * dup,       /* UNTESTED/UNUSED dup vector             n      */
       double * costChangeDbl, /* (costChange,T) per item          iter * 2 */
-      int * auxFunctionIterInt /* how often to run the auxiliary function 1 */
+      int * auxFunctionIterInt, /* how often to run the auxiliary function 1 */
+      int * costChangeSizeInt      /* size of a cost change element           1 */
     ) { 
   
   /* note that we get ints from R and we want to work with size_t, which are not the same for most systems */ 
@@ -48,6 +49,7 @@ void R_substrata2 (
   size_t auxFunctionIter = (size_t) *auxFunctionIterInt; /* run the auxiliary update program this often */
   size_t ANInt = (size_t) * ANIntInt;
   size_t ANDbl = (size_t) * ANDblInt;
+  size_t costChangeSize = (size_t) *costChangeSizeInt;
 
   /***** 0.2 ASSIGN OUR MEMORY *****/
 
@@ -93,6 +95,7 @@ void R_substrata2 (
     N,                       // number of elements within a state             //
     iter,                       // max number of iterations                      //
     auxFunctionIter,
+    costChangeSize,
     substrata2_init,          // init function                                 //
     substrata2_randomState,
     substrata2_costChange,    // cost change function                          //

@@ -67,7 +67,8 @@ typedef void ( * updateFunctionPtr )(
             double *, /* distance matrix */
             void *,   /* administrative data */
             size_t,   /* number of distance matricies */
-            size_t    /* number of elements within a state */
+            size_t,   /* number of elements within a state */
+            double *  /* single vector of length 5 from cost change */ 
             );
     
 /* cooling schedule                                                           */
@@ -118,6 +119,7 @@ double *  sa(
     size_t N,                /* number of elements within a state             */
     size_t m,                /* max number of iterations                      */
     size_t auxFunctionIter,  /* how often to run the auxiliar update function */
+    size_t costChangeSize,   /* size of a cost change element */
     initFunctionPtr initSAFunction,  /* initialize function                           */
     randomStateFunctionPtr randomStateSAFunction, /* random state function */
     costChangeFunctionPtr costChangeFunction,

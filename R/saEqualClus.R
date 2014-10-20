@@ -22,7 +22,7 @@ function(
   d <- ncol(x)
   k <- length(c(x)) / ( n * d)
  
-  acceptRate <- rep(0,3*iterations) 
+  acceptRate <- rep(0,5*iterations) 
   cost <- rep(1,d) 
 
   adminDbl <- c( PSUAcres, targetVar, targetVarWithin, cooling, tolSize)
@@ -40,7 +40,7 @@ function(
   }
   
   dup <- c() 
-
+  costChangeSize <- 5
   
 r.result <- .C("R_substrata2",
   as.double(c(x)),      #checked
@@ -56,7 +56,8 @@ r.result <- .C("R_substrata2",
   as.integer(adminDblLength), #checked
   as.integer(dup),        #checked
   as.double(acceptRate),   #checked 
-  as.integer(iterations)   # needed but not used
+  as.integer(iterations),   # needed but not used
+  as.integer(costChangeSize)
 )
 
   print("C running time")
@@ -64,8 +65,8 @@ r.result <- .C("R_substrata2",
   
   rlabel <- sapply(unlist(r.result[6]), function(x) unique.label[x+1] ) 
                  
-  a <- matrix(unlist(r.result[13]),ncol=3,byrow=T) 
-  colnames(a) <- c( 'change', 'U', 'accepted')
+  a <- matrix(unlist(r.result[13]),ncol=5,byrow=T) 
+  colnames(a) <- c( 'change', 'U', 'accepted', 'from', 'to')
 
   myList <- list("accept"=a,
                  "cost"=r.result[7], 
