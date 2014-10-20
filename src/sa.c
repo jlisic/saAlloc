@@ -48,15 +48,15 @@ double * sa(
   initSAFunction( I, Q, D, A, dN, N);
  
 
-  Rprintf("\n****************** init ****************\n");
-  diagFunction(i,I,Q,A,dN,N);
+  //Rprintf("\n****************** init ****************\n");
+  //diagFunction(i,I,Q,A,dN,N);
  
   while( i < m ) {
 
     /* print status every 1000th */ 
     if( m > 1 ) { 
       progress = ( (double) i*100 ) / ( (double) m ); 
-      //if( i % (m/1000) == 0) Rprintf("iter: %d\%\r",   (int) progress );
+      if( i % (m/1000) == 0) Rprintf("Percent Complete: %d\%\r",   (int) progress );
     }
     
     
@@ -114,8 +114,12 @@ double * sa(
   } 
   
   PutRNGstate();
+  
+  /* output status */  
+  progress = ( (double) i*100 ) / ( (double) m ); 
+  Rprintf("Percent Complete: %d\%\n",   (int) progress );
 
-  diagFunction(i,I,Q,A,dN,N);
+  //diagFunction(i,I,Q,A,dN,N);
 
   return( costChange );
 }

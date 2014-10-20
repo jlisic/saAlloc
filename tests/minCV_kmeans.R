@@ -1,28 +1,5 @@
 library(saAlloc)
 
-################# functions ######################
-
-# function to calculate cv
-cv <- function( x, strata = rep(1,nrow(x)), sampleSize=1) {
-   
-  # get standard deviation
-  vars <- aggregate( x,by=list(strata), var)[,-1]
- 
-  # get number of strata
-  H <- length(unique(strata))                                                                                                                                               
-    # if only one sample is provided, samples are distributed uniformly
-  if( length(sampleSize) != H) {
-       
-    if( length(sampleSize) != 1 ) stop("Invalid number of sample sizes")
-  
-    sampleSize = rep(sampleSize/H,H)
-  }
-   
-  # get total
-  totals <- colSums( x )
-  Nh <- aggregate( x,by=list(strata), length)[,-1]
-  return(sqrt(colSums(vars * Nh^2/sampleSize)) / totals )
-}
 
 
 ################# generate data ######################
@@ -71,10 +48,10 @@ N <- nrow(x)
 H <- 3 
 sampleSize <- rep( 4, H) 
 iterations <- 50000
-sampleIterations <- 100
-sampleUpdateIterations <- 100
-cool = 3
-cvTargetX = 0.1
+sampleIterations <- 0
+sampleUpdateIterations <- 300
+cool = 0 
+cvTargetX = 0.07
 cvTargetY = 0.1
  
 # initial k-means clutering
@@ -92,15 +69,120 @@ saStrata <- saMinCV(
   sampleSize=sampleSize
 )
 
-# calculate cv
-cv.minCV <- cv(
-  x,
-  strata=currentCluster,
-  sampleSize=clustersOpt()$sampleSize 
-)
+
+print( cbind( cv.minCV, cv.kMeansCV, c(cvTargetX, cvTargetY)))
+
+
+
+# plot for s3 saAlloc object
+# together == T, all vars on one plot
+# together == F, separate plots for each commodity
+plot.saAlloc <- function( x, together=TRUE ) {
+  
+  # get variables 
+  accept <- x$accept
+  variables <- x$variables
+
+  ### pars for multiplots
+  if(!together ) {
+    plotRow <-  ceiling(sqrt(length(variables)))
+    plotCol <-  ceiling(length(variables) / plotRow)
+    par(mfrow= c(plotRow,plotCol) )
+  }
+
+
+  #### plot all variables on the same plot
+
+  # plot first variable 
+  plot(
+    1:iterations,
+    accept[,variables[1]],
+    type='l', 
+    ylim=c(0,max(accept[,variables])) 
+  )
+
+  # add title
+  if(together) {
+    title("Trace of CVs")
+  } else {
+    title(sprintf("Trace of CV for %s",variables[1]))
+  }
+
+  # plot other variables 
+  if(length(variables) > 1 ) {
+
+    if( together ) {
+      for( i in 2:length(variables) ) {
+        points(
+            1:iterations,
+            accept[,variables[i] ],
+            type='l',
+            col=i
+          )
+      }
+    } else {
+      for( i in 2:length(variables) ) {
+        plot(
+          1:iterations,
+          accept[,variables[i] ],
+          type='l',
+          col=i
+        )
+        title(sprintf("Trace of CV for %s",variables[i]))
+      }
+    }
+
+
+  }
+
+  # add legend
+  if( together ) {
+    legend( 
+      "topright",
+      variables,                     # add names
+      lty=rep(1,length(variables)),  # add lines
+      col = 1:length(variables)      # add color
+    )
+  } 
+}
+
+
+
+# summary for s3 saAlloc object
+summary.saAlloc <- function(x) {
+
+  print("CVs")
+  y <- cbind( x$CVStart, x$CV, x$targetCV ) 
+  colnames(y) <- c("Initial", "Final", "Target" ) 
+  print(y)
+ 
+  print("Sample Size") 
+  y <- cbind( x$sampleSizeStart, x$sampleSize ) 
+  colnames(y) <- c("Initial", "Final" ) 
+  print(y)
+
+
+  print("Strata Size:")
+  y <- cbind( x$strataSizeStart, x$strataSize ) 
+  colnames(y) <- c("Initial", "Final" ) 
+  print(y)
+
+
+  print("Auxiliary Size Constraint:")
+  y <- cbind( x$acresStart, x$acres ) 
+  colnames(y) <- c("Initial", "Final" ) 
+  print(y)
+
+
+  print( x$runTime)
+
+}
 
 
 
 
 
+# plot and summary
+plot(saStrata)
+summary(saStrata)
 

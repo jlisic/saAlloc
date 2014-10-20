@@ -86,7 +86,6 @@ function(
     sampleSize.n <- sampleSize # make a copy of sampleSize
 
     sampleSize <- rep(floor(sampleSize/H) , H)
-    print(sampleSize)
 
     if( sum(sampleSize) < sampleSize.n ) {
       sampleSizeAddTo <- sample(1:H,size=sampleSize.n - sum(sampleSize))
@@ -98,9 +97,6 @@ function(
       stop( "0 == length(sampleSize)" ) 
   }
     
-
-  print("sampleSize")
-  print(sampleSize)
 
   # group data together for input
   adminDbl <- c( 
@@ -145,8 +141,7 @@ r.result <- .C("R_minCV",
   as.integer(costChangeSize)
 )
 
-  print("C running time")
-  print(proc.time() - Cprog) 
+  runTime <- proc.time() - Cprog
  
 
   #################### RETURN DATA ######################################
@@ -158,15 +153,53 @@ r.result <- .C("R_minCV",
     x.colnames <- colnames(x)
   }
 
+  ## change and other accept data
   a <- matrix(unlist(r.result[13]),ncol=5 + H + d,byrow=T)
   colnames(a) <- c( 'change', 'U', 'accepted','from','to', 
                    sprintf("n_%d",unique.label), 
                    x.colnames
                    )
+  ## label
+  newRlabel <- sapply(unlist(r.result[6]), function(x) unique.label[x+1] ) 
+   
+  ## sample size 
+  newSampleSize <- unlist(r.result[14]) 
+  names(newSampleSize) <- sprintf("n_%d",unique.label)
+  names(sampleSize) <- sprintf("n_%d",unique.label)
 
-  rlabel <- sapply(unlist(r.result[6]), function(x) unique.label[x+1] ) 
+  ## final and initial CVs
+  CVStart <- .cv( x, rlabel, sampleSize) 
+  CV      <- .cv( x, newRlabel, newSampleSize) 
 
-  myList <- list("accept"=a, "cost"=unlist(r.result[7]), "label"=rlabel, "sampleSize"=unlist(r.result[14]) )
-    
+  ## strata Size
+  strataSizeStart <- aggregate(x, by=list(rlabel), length) 
+  strataSize      <- aggregate(x, by=list(newRlabel), length) 
+
+
+  ## auxiliary size constraint (acres)
+  acresStart <- aggregate(PSUAcres*segments, by=list(rlabel), sum) 
+  acres      <- aggregate(PSUAcres*segments, by=list(newRlabel), sum) 
+
+
+
+  myList <- list(
+    "accept"=a, 
+    "cost"=unlist(r.result[7]), 
+    "label"=newRlabel, 
+    "sampleSize"=newSampleSize,
+    "sampleSizeStart"=SampleSize,
+    "CV"=CV,
+    "CVStart"=CVStart,
+    "strataSize"=strataSize,
+    "strataSizeStart"=strataSizeStart,
+    "acres"=acres,
+    "acresStat"=acresStart,
+    "runTime"=runTime,
+    "variables"=x.colnames
+  )
+
+
+  class(myList) <- "saAlloc"
+
   return(myList)
 }

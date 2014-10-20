@@ -425,9 +425,10 @@ void minCV_update (
 
   /* open the data structure and convert it to something useful */
   minCV_adminStructPtr a = (minCV_adminStructPtr) A; 
-  size_t d;
-  double * sampleSize = a->sampleSize;
-  size_t H = a->H;
+  size_t   d;
+  double * sampleSize    = a->sampleSize;      /* sample size */
+  size_t   H             = a->H;               /* number of strata */
+  double * T             = a->T;               /* cv targets */
 
   /* record objective function and sample sizes for diagnostics */
   if ( accept == 2) { 
@@ -438,7 +439,7 @@ void minCV_update (
     for( d = 0; d < H; d++) costChange[5+d] = sampleSize[d]; 
     
     /* add on current obj function */
-    for( d = 0; d < dN; d++) costChange[5 + H +d] = Q[d]; 
+    for( d = 0; d < dN; d++) costChange[5 + H +d] = Q[d] + T[d]; 
 
     return;
   }
@@ -759,7 +760,7 @@ void minCV_diag(
     ) {
 
   double *** C;
-  size_t H, NhMax, d,f;
+  size_t H, NhMax, d;
   size_t * Nh;
   double * T;
   double ** V;
