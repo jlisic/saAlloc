@@ -75,10 +75,15 @@ saMinCV(
 }
 \value{
   \item{accept}{ Matrix with three columns and a row for each iteration, 
-    "change": change in objective function, 
-    "U": uniform random variable, 
+    "change":   change in objective function, 
+    "U":        uniform random variable, 
     "accepted": 1 - accepted, 
-                0 - not accepted }
+                0 - not accepted 
+    "from":     index of PSU, 
+    "to":       attempted move of PSU, 
+    "n_h":      sample size (h is the index or label associated with strata),
+    column names or numbers if not presented
+  }
   \item{cost}{ Objective Function }
   \item{label}{ Final Label }
   \item{sampleSize}{ Final Sample Size }
