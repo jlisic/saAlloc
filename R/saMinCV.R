@@ -38,7 +38,7 @@ function(
   H <- length(unique.label)    # number of strata
 
   # need to re-label
-  acceptRate <- rep(0,5*iterations) 
+  acceptRate <- rep(0,(5 + H + d)*iterations) 
   cost <- rep(1,d) 
   
   #################### PROBABILITY ######################################
