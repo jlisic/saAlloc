@@ -38,7 +38,7 @@ double * sa(
   double newCostChange=0;    /* change in total cost                          */
   double T;                  /* value of cooling schedule                     */
   double U;                  /* U(0,1) random variable                        */
-
+  double progress;
 
   /* take care of R random number generator */
   GetRNGstate();
@@ -52,12 +52,12 @@ double * sa(
   diagFunction(i,I,Q,A,dN,N);
  
   while( i < m ) {
+
     /* print status every 1000th */ 
-   // Rprintf("saIter: %d\n", (int) i);
-   
-    if( m > 1 ) 
-        Rprintf("iter: %d, %d \n",  (int)  i, (int) m  );
-      /* if( i % (m/1000) == 0)  */
+    if( m > 1 ) { 
+      progress = ( (double) i*100 ) / ( (double) m ); 
+      //if( i % (m/1000) == 0) Rprintf("iter: %d\%\r",   (int) progress );
+    }
     
     
     // 1. select a potential move t_{i+1} 
