@@ -23,7 +23,8 @@ saMinCV(
      cooling=0, 
      segments=rep(1,nrow(x)), 
      PSUAcres=rep(1,nrow(x)), 
-     targetVarWithin=rep(0,ncol(x))
+     targetVarWithin=rep(0,ncol(x)),
+     preserveSatisfied=TRUE
    )
 }
 %- maybe also 'usage' for other objects documented here.
@@ -72,7 +73,11 @@ saMinCV(
   If prior clustering is performed and assumed constant across the population 
   then it can be handled here.
   }
-}
+  \item{preserveSatisfied}{
+   TRUE implies that any constraint that is met for an accepted state is kept,
+   FALSE allows for met CVs to be violated by accepted states.
+ } 
+ }
 \value{
   \item{accept}{ Matrix with three columns and a row for each iteration, 
     "change":   change in objective function, 

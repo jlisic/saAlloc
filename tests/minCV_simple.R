@@ -69,13 +69,14 @@ x <- cbind(x1,x2,x2)
 targetCV <- c(.01,.01,.01)
 
 # run minCV
-saMinCV(
+b <- saMinCV(
   x,
   label,
-  iter=200,
+  iterations=20,
   cooling=0,
   targetCV=targetCV,
   sampleSize=8
 )
 
+summary(b) 
 

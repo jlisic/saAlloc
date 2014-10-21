@@ -11,7 +11,8 @@ function(
   cooling=0,
   segments=rep(1,nrow(x)),
   PSUAcres=rep(1,nrow(x)),
-  targetVarWithin=rep(0,ncol(x))
+  targetVarWithin=rep(0,ncol(x)),
+  preserveSatisfied=TRUE
   ) {
 
   tolSize <- 1 # not used
@@ -96,7 +97,8 @@ function(
   } else {
       stop( "0 == length(sampleSize)" ) 
   }
-    
+   
+
 
   # group data together for input
   adminDbl <- c( 
@@ -112,7 +114,7 @@ function(
     tolSize 
   )
   adminDblLength <- length( adminDbl )
-  adminInt <- c(segments, sampleIterations) 
+  adminInt <- c(segments, sampleIterations, as.integer(preserveSatisfied)) 
   adminIntLength <- length( adminInt )
 
   dup <- c() 
@@ -172,13 +174,23 @@ r.result <- .C("R_minCV",
   CV      <- .cv( x, newRlabel, newSampleSize) 
 
   ## strata Size
-  strataSizeStart <- aggregate(rlabel, by=list(rlabel), length)$x
-  strataSize      <- aggregate(newRlabel, by=list(newRlabel), length)$x 
+  strataSizeStart <- aggregate(rlabel, by=list(rlabel), length)
+  rownames(strataSizeStart) <- strataSizeStart[,1] 
+  strataSizeStart <- strataSizeStart$x 
+
+  strataSize      <- aggregate(newRlabel, by=list(newRlabel), length)
+  rownames(strataSize) <- strataSize[,1] 
+  strataSize <- strataSize$x 
 
 
   ## auxiliary size constraint (acres)
-  acresStart <- aggregate(PSUAcres*segments, by=list(rlabel), sum)$x 
-  acres      <- aggregate(PSUAcres*segments, by=list(newRlabel), sum)$x 
+  acresStart <- aggregate(PSUAcres*segments, by=list(rlabel), sum)
+  rownames(acresStart) <- acresStart[,1] 
+  acresStart <- acresStart$x 
+
+  acres      <- aggregate(PSUAcres*segments, by=list(newRlabel), sum)
+  rownames(acres) <- acres[,1] 
+  acres <- acres$x 
 
 
 

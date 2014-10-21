@@ -51,6 +51,7 @@ typedef struct
   size_t * size;
   size_t * NhSize;
   double acreDif;
+  size_t preserveSatisfied;
 } 
 minCV_adminStruct;
 

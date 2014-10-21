@@ -339,6 +339,7 @@ double minCV_costChange (
   size_t h;
   double fixedVar;
   size_t  Hi, d; 
+  size_t preserveSatisfied = a->preserveSatisfied;
 
   double NhSizeHj, NhSizeHi, nhSizeHi, nhSizeHj;
 
@@ -382,7 +383,13 @@ double minCV_costChange (
       ) / Total[d] - T[d];
 
     /* get the max change in CV */
-    if( R[d] > 0 ) { 
+    if( R[d] > 0 ) {
+
+      /* if preserveSatisfied == 1 then any change that would violate a met 
+       * constraint will be avoided
+       */
+      if( ( Q[d] <= 0 ) & (preserveSatisfied == 1) ) return( INFINITY );
+
       if( R[d] - Q[d] > delta ) {
         delta =R[d] - Q[d];
       }
@@ -610,6 +617,9 @@ void * minCV_packSubstrata(
 
   /* get the number of iterations to optimize sample size */
   packedStruct->sampleIter = (size_t) aInt[N];
+  
+  /* get the handling of changes that violate a met constraint */ 
+  packedStruct->preserveSatisfied = (size_t) aInt[N + 1];
 
   /* Nh is the size of each label (vector) */
   size_t * Nh = minCV_labelTotalPSUs( I, N, H);

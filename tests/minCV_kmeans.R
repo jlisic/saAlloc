@@ -6,9 +6,9 @@ library(saAlloc)
 
 set.seed(400)
 
-nHigh   <- 400
-nMed    <- 200 
-nLow <- 600 
+nHigh   <- 40
+nMed    <- 20 
+nLow <- 60 
 
 # high density cultivation, few farms
 highCult <- cbind( 
