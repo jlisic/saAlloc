@@ -5,8 +5,8 @@
 
   # get k 
   if(average) {
-    k <- nrow(x) / label(x)
-    if(!is.integer(k)) stop("average distance cannot be calculated, non-constant k")
+    k <- nrow(x) / length(strata)
+    if(as.integer(k) != k) stop(sprintf("average distance cannot be calculated, non-integer k=%f", k))
   } else {
     k <- 1
   }
@@ -19,13 +19,16 @@
         by= list( rep(strata,each=k), rep(1:k,length(strata))),
         var
       )
-
-    vars <- aggregate( vars$x, by=list(vars$Group.1), mean)$x
+    
+    vars <- aggregate( 
+              vars[,-c(1,2),drop=FALSE], 
+              by=list(vars$Group.2), 
+              mean)[,-1]
     
 
   } else {
     # get variance
-    vars <- aggregate( x,by=list(strata), var)$x
+    vars <- aggregate( x,by=list(strata), var)[,-1]
   }
  
   # get number of strata
@@ -40,7 +43,9 @@
    
   # get total
   totals <- colSums( x ) /k
-  Nh <- aggregate( x,by=list(strata), length)[,-1]
+  Nh <- aggregate( strata,by=list(strata), length)[,-1]
+
+
   return(sqrt(colSums(vars * Nh^2/sampleSize)) / totals )
 }
 

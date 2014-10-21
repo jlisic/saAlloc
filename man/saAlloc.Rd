@@ -1,36 +1,43 @@
-\name{saMinCV}
-\alias{saMinCV}
-%- Also NEED an '\alias' for EACH other topic documented here.
+\name{saAlloc}
+\alias{saAlloc}
+\alias{plot.saAlloc}
+\alias{summary.saAlloc}
 \title{
-Minimum CV Strata Formation and Allocation via Simulated Annealing
+saAlloc Object 
 }
 \description{
-This function exchanges sampling units between strata to minimzie the target CV,
-every few steps (as determined by sampleUpdateIterations) a number of 
-iterations are performed to improve the target CV by changing the sample 
-allocation.
+  The saAlloc object contains a set of results obtained by either by
+  forming optimal strata and allocations for fixed CV constraints and 
+  fixed total sample size (minCV) or without fixed sample size (saEqualClus). 
 }
 \usage{
-saMinCV(
-     x, 
+
+  saAlloc(
+     y, 
      label, 
-     targetCV, 
+     targetCV,
+     targetVar, 
      sampleSize, 
      weightMatrix, 
+     method='saMinCV',
      iterations=1000, 
      sampleIterations=100, 
      sampleUpdateIterations=100,
      cooling=0, 
      segments=rep(1,length(label)), 
      PSUAcres=rep(1,length(label)), 
-     targetVarWithin=rep(0,ncol(x)),
-     preserveSatisfied=TRUE
+     targetVarWithin=rep(0,ncol(y)),
+     preserveSatisfied=TRUE,
+     tolSize=1
    )
+
+  \method{plot}{saAlloc}(x, together = TRUE,...)
+  \method{summary}{saAlloc}(object,...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{x}{
-  (Required) A matrix where each row is a sampling unit and each column is a 
+  \item{y}{
+  A matrix where each row is a sampling unit and each column is a 
   characteristic of the sampling unit that is to be reduced in optimal sampling
   size.  
 
@@ -58,7 +65,10 @@ saMinCV(
   (Required) Initial stratum assignment.
   }
   \item{targetCV}{
-  (Required) Target CV, must be equal to the columns of x
+  (Required) Target CV, must be equal to the columns of y 
+  }
+  \item{targetVar}{
+  (Required) Target Variance, must be equal to the columns of y 
   }
   \item{sampleSize}{
   (Required) sample size, either a scalar that will be equally split between
@@ -68,6 +78,9 @@ saMinCV(
   matrix of size nrow(x) by total strata, the higher the weight for a PSU for 
   a particular strata relative to the PSU's other strata weight the more likely
   it is to be moved to that strata. 
+  }
+  \item{method}{
+    One of two methods 'saEqualClus' or 'saMininCV'.
   }
   \item{iterations}{
   Number of iterations to perform of the Simulated Annealing procedure.
@@ -96,25 +109,34 @@ saMinCV(
   \item{preserveSatisfied}{
    TRUE implies that any constraint that is met for an accepted state is kept,
    FALSE allows for met CVs to be violated by accepted states.
- } 
- }
-\value{
-  \item{accept}{ Matrix with three columns and a row for each iteration, 
-    "change":   change in objective function, 
-    "U":        uniform random variable, 
-    "accepted": 1 - accepted, 
-                0 - not accepted 
-    "from":     index of PSU, 
-    "to":       attempted move of PSU, 
-    "n_h":      sample size (h is the index or label associated with strata),
-    column names or numbers if not presented
+  } 
+  \item{x}{
+  an object of class 'saAlloc', typically from a call to 'saAlloc', 'saMinCV' 
+  or 'saEqualClus'.
   }
-  \item{cost}{ Objective Function }
-  \item{label}{ Final Label }
-  \item{sampleSize}{ Final Sample Size }
+  \item{object}{
+  an object of class 'saAlloc', typically from a call to 'saAlloc', 'saMinCV' 
+  or 'saEqualClus'.
+  }
+  \item{together}{
+  if TRUE then include all traces on a single plot, otherwise
+  use a separate plot for each trace. 
+  }
+  \item{...}{ other parameters to be passed through the function
+   function. 
+  }
+  \item{tolSize}{
+    Acceptable difference between PSUacres.
+  }
+}
+\author{
+  Jonathan Lisic
 }
 
-
+\seealso{
+  \code{\link{saMinCV}}
+  \code{\link{saEqualClus}}
+}
 \examples{
 
 # data set with 100 observations and four 
@@ -132,6 +154,14 @@ b <- saMinCV(
   sampleSize=20
 )
 
+# both of these functions return the same 
+# plot
+
+# plot through s3 object
+plot(b)
+
+# plot explicitly
 summary(b)
 
 }
+

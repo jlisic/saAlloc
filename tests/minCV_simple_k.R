@@ -97,3 +97,7 @@ b <- saMinCV(
 )
 
 summary(b) 
+
+
+
+

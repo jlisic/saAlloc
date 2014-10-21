@@ -40,7 +40,7 @@ saEqualClus(
   If prior clustering is performed to form sampling units, this allows 
   }
   \item{PSUAcres}{
-  PSU size (originally done in acres), 
+  PSU size (originally done in acres, but could be any control variable), 
   }
   \item{targetVar}{
 %%     ~~Describe \code{targetVar} here~~

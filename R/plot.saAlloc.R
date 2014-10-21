@@ -2,11 +2,12 @@
 # plot for s3 saAlloc object
 # together == T, all vars on one plot
 # together == F, separate plots for each commodity
-plot.saAlloc <- function( x, together=TRUE ) {
+plot.saAlloc <- function( x, together=TRUE, ... ) {
   
   # get variables 
   accept <- x$accept
   variables <- x$variables
+  iterations <- nrow(accept)
 
   ### pars for multiplots
   if(!together ) {

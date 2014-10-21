@@ -9,8 +9,8 @@ function(
   sampleIterations=100,
   sampleUpdateIterations=100,
   cooling=0,
-  segments=rep(1,nrow(x)),
-  PSUAcres=rep(1,nrow(x)),
+  segments=rep(1,length(label)),
+  PSUAcres=rep(1,length(label)),
   targetVarWithin=rep(0,ncol(x)),
   preserveSatisfied=TRUE
   ) {
@@ -156,9 +156,6 @@ function(
 
   costChangeSize <- 5 + H + d 
 
-  print(targetCV)
-  print(sampleSize)
-  print(unique.label)
 
   #################### RUN C FUNCTION ######################################
   
@@ -208,8 +205,8 @@ r.result <- .C("R_minCV",
   names(sampleSize) <- sprintf("n_%d",unique.label)
 
   ## final and initial CVs
-  CVStart <- .cv( x, rlabel, sampleSize) 
-  CV      <- .cv( x, newRlabel, newSampleSize) 
+  CVStart <- .cv( x, rlabel, sampleSize, average=TRUE) 
+  CV      <- .cv( x, newRlabel, newSampleSize, average=TRUE) 
 
   ## strata Size
   strataSizeStart <- aggregate(rlabel, by=list(rlabel), length)

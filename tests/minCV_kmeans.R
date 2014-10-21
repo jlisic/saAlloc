@@ -47,7 +47,7 @@ x <- rbind( highCult, mediumCult, lowCult)
 N <- nrow(x)
 H <- 3 
 sampleSize <- rep( 4, H) 
-iterations <- 500000
+iterations <- 200
 sampleIterations <- 100 
 sampleUpdateIterations <- 300
 cool = 10 

@@ -1,6 +1,5 @@
 \name{saAlloc-package}
 \alias{saAlloc-package}
-\alias{saAlloc}
 \docType{package}
 \title{
 Optimal Allocation of Sampling Units to Form Strata Using Simulated Annealing 
