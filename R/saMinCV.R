@@ -112,7 +112,7 @@ function(
       stop( "sampleSize names do match elements in label" ) 
     # at this point everthing seems ok, so reorder the sample size
     } else {
-      sampleSize <- sampleSize[ unique.label ] 
+      sampleSize <- sampleSize[ as.character( unique.label ) ] 
     }
 
 
@@ -131,7 +131,8 @@ function(
   } else {
       stop( "0 == length(sampleSize)" ) 
   }
-   
+  # final sample size check 
+  if( sum(sampleSize < 2) > 0 ) stop("Each element of sampleSize must be of at least 2")
 
 
   # group data together for input
@@ -155,6 +156,9 @@ function(
 
   costChangeSize <- 5 + H + d 
 
+  print(targetCV)
+  print(sampleSize)
+  print(unique.label)
 
   #################### RUN C FUNCTION ######################################
   

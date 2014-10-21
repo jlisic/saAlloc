@@ -1,3 +1,5 @@
+# this is a test for averaging S^2 (e.g. k > 1)  
+
 library(saAlloc)
 
 set.seed(400)
@@ -64,12 +66,21 @@ x2 <- c(
         4
         )
 
-x <- cbind(x1,x2,x2)
+x3 <- 1:16
 
+a <- cbind(x1 + runif(16),x2 + runif(16), x3 + runif(16))
+b <- cbind(x1 + runif(16),x2 + runif(16), x3 + runif(16))
+
+colnames(a) <- c('Turtle','Trout','Tuna')
+colnames(b) <- c('Turtle','Trout','Tuna')
+
+
+# interleave a and b
+x <- t(matrix( rbind( t(a), t(b)), nrow=ncol(a)))
 colnames(x) <- c('Turtle','Trout','Tuna')
 
 
-#target variance
+# target variance
 targetCV <- c(.01,.02,.03)
 names(targetCV) <- c('Tuna','Turtle','Trout')
 
@@ -86,20 +97,3 @@ b <- saMinCV(
 )
 
 summary(b) 
-
-sampleSize <- c(6,2)
-names(sampleSize) <- c(1,0)
-
-
-# run minCV
-b <- saMinCV(
-  x,
-  label,
-  iterations=20,
-  cooling=10,
-  targetCV=targetCV,
-  sampleSize=sampleSize
-)
-
-summary(b) 
-
