@@ -44,6 +44,7 @@ x1 <- c(
         2,
         2
         )
+
 x2 <- c(
         3,
         3,
@@ -65,8 +66,16 @@ x2 <- c(
 
 x <- cbind(x1,x2,x2)
 
+colnames(x) <- c('Turtle','Trout','Tuna')
+
+print( head(x) )
+
 #target variance
-targetCV <- c(.01,.01,.01)
+targetCV <- c(.01,.02,.03)
+names(targetCV) <- c('Tuna','Turtle','Trout')
+
+print(targetCV)
+
 
 # run minCV
 b <- saMinCV(
@@ -76,6 +85,24 @@ b <- saMinCV(
   cooling=0,
   targetCV=targetCV,
   sampleSize=8
+)
+
+summary(b) 
+
+sampleSize <- c(6,2)
+names(sampleSize) <- c(1,0)
+
+# reorder check
+print(sampleSize)
+
+# run minCV
+b <- saMinCV(
+  x,
+  label,
+  iterations=20,
+  cooling=10,
+  targetCV=targetCV,
+  sampleSize=sampleSize
 )
 
 summary(b) 

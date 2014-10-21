@@ -75,13 +75,47 @@ function(
   if( round(sampleUpdateIterations) != sampleUpdateIterations ) stop("sampleUpdateIter is not an integer ") 
    
   
+  #################### TARGET CV ######################################
+  # handle sample size 
+
+  # stop if the sampleSize lenght does not equal the number of distinct elements
+  if( d != length(targetCV) ) {
+    stop( "ncol(x) != length(targetCV)" )  
+  # warning if there are no names 
+  } else if( length(names(targetCV)) == 0 ) {
+    warning( "targetCV has no names, assuming that the targetCV are in the same order as x." ) 
+  # error if there are names but don't match what we find in unique.label
+  } else if( !identical( sort(names(targetCV)), sort(colnames(x)))  ) {
+    stop( "targetCV names do match column names of x" ) 
+  } else if( anyDuplicated( names(targetCV) ) != 0  ) {
+    stop( "targetCV names do exist but are not unique" ) 
+  # at this point everthing seems ok, so reorder the sample size
+  } else {
+    targetCV <- targetCV[ colnames(x) ] 
+  }
+  
+  
+  
   #################### OPTIMAL SAMPLE SIZE ######################################
   
   # handle sample size 
   if( length(sampleSize) > 1 ) {
+
+    # stop if the sampleSize lenght does not equal the number of distinct elements
     if( H != length(sampleSize) ) {
-      stop( "H != length(sampleSize)" ) 
+      stop( "H != length(sampleSize)" )  
+    # warning if there are no names 
+    } else if( length(names(sampleSize)) == 0 ) {
+      warning( "sampleSize has no names, assuming that the sample sizes are in asscending order with respect to the strata in label." ) 
+    # error if there are names but don't match what we find in unique.label
+    } else if( !identical( sort(as.numeric(names(sampleSize))), unique.label)  ) {
+      stop( "sampleSize names do match elements in label" ) 
+    # at this point everthing seems ok, so reorder the sample size
+    } else {
+      sampleSize <- sampleSize[ unique.label ] 
     }
+
+
   } else if(length(sampleSize) == 1) {
 
     sampleSize.n <- sampleSize # make a copy of sampleSize
@@ -175,22 +209,22 @@ r.result <- .C("R_minCV",
 
   ## strata Size
   strataSizeStart <- aggregate(rlabel, by=list(rlabel), length)
-  rownames(strataSizeStart) <- strataSizeStart[,1] 
-  strataSizeStart <- strataSizeStart$x 
+  rownames(strataSizeStart) <- strataSizeStart$Group.1
+  strataSizeStart <- strataSizeStart[,2,drop=FALSE] 
 
   strataSize      <- aggregate(newRlabel, by=list(newRlabel), length)
-  rownames(strataSize) <- strataSize[,1] 
-  strataSize <- strataSize$x 
+  rownames(strataSize) <- strataSize$Group.1
+  strataSize <- strataSize[,2,drop=FALSE] 
 
 
   ## auxiliary size constraint (acres)
   acresStart <- aggregate(PSUAcres*segments, by=list(rlabel), sum)
-  rownames(acresStart) <- acresStart[,1] 
-  acresStart <- acresStart$x 
+  rownames(acresStart) <- acresStart$Group.1
+  acresStart <- acresStart[,2,drop=FALSE] 
 
   acres      <- aggregate(PSUAcres*segments, by=list(newRlabel), sum)
-  rownames(acres) <- acres[,1] 
-  acres <- acres$x 
+  rownames(acres) <- acres$Group.1
+  acres <- acres[,2,drop=FALSE] 
 
 
 
