@@ -38,7 +38,6 @@ double * sa(
   double newCostChange=0;    /* change in total cost                          */
   double T;                  /* value of cooling schedule                     */
   double U;                  /* U(0,1) random variable                        */
-  double progress;
 
   /* take care of R random number generator */
   GetRNGstate();
@@ -53,10 +52,14 @@ double * sa(
  
   while( i < m ) {
 
+
     /* print status every 1000th */ 
     if( m > 1 ) { 
-      progress = ( (double) i*100 ) / ( (double) m ); 
-      if( i % (m/1000) == 0) Rprintf("Percent Complete: %d\%\r",   (int) progress );
+      if( m < 100000 ) {
+        Rprintf("Percent Complete: %d\%\r", (int) (100*i)/m);
+      } else if( (1000 * i) % m == 0 ) {
+        Rprintf("Percent Complete: %d\%\r", (int) (100*i)/m);
+      }
     }
     
     
@@ -116,8 +119,7 @@ double * sa(
   PutRNGstate();
   
   /* output status */  
-  progress = ( (double) i*100 ) / ( (double) m ); 
-  Rprintf("Percent Complete: %d\%\n",   (int) progress );
+  Rprintf("Percent Complete: %d\%\n", (int) (i*100)/m  );
 
   //diagFunction(i,I,Q,A,dN,N);
 
