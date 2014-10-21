@@ -172,13 +172,13 @@ r.result <- .C("R_minCV",
   CV      <- .cv( x, newRlabel, newSampleSize) 
 
   ## strata Size
-  strataSizeStart <- aggregate(x, by=list(rlabel), length) 
-  strataSize      <- aggregate(x, by=list(newRlabel), length) 
+  strataSizeStart <- aggregate(rlabel, by=list(rlabel), length)$x
+  strataSize      <- aggregate(newRlabel, by=list(newRlabel), length)$x 
 
 
   ## auxiliary size constraint (acres)
-  acresStart <- aggregate(PSUAcres*segments, by=list(rlabel), sum) 
-  acres      <- aggregate(PSUAcres*segments, by=list(newRlabel), sum) 
+  acresStart <- aggregate(PSUAcres*segments, by=list(rlabel), sum)$x 
+  acres      <- aggregate(PSUAcres*segments, by=list(newRlabel), sum)$x 
 
 
 
@@ -187,13 +187,14 @@ r.result <- .C("R_minCV",
     "cost"=unlist(r.result[7]), 
     "label"=newRlabel, 
     "sampleSize"=newSampleSize,
-    "sampleSizeStart"=SampleSize,
+    "sampleSizeStart"=sampleSize,
     "CV"=CV,
     "CVStart"=CVStart,
+    "targetCV"=targetCV,
     "strataSize"=strataSize,
     "strataSizeStart"=strataSizeStart,
     "acres"=acres,
-    "acresStat"=acresStart,
+    "acresStart"=acresStart,
     "runTime"=runTime,
     "variables"=x.colnames
   )

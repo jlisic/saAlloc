@@ -1,3 +1,5 @@
 useDynLib(saAlloc)
 export(saEqualClus)
 export(saMinCV)
+export(plot.saAlloc)
+export(summary.saAlloc)

@@ -107,22 +107,6 @@ b <- saMinCV(
   sampleSize=20
 )
 
-
-# compare results
-print("before CV")
-print( sqrt(
-  colSums(
-    50*aggregate(x,by=list(label),var)
-    )[-1]) / colSums(x) )
-
-print("Min CV")
-print( sqrt(
-  colSums(
-    50*aggregate(x,by=list(b$label),var)
-    )[-1]) / colSums(x) )
+summary(b)
 
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
