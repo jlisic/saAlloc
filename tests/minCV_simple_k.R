@@ -68,8 +68,12 @@ x2 <- c(
 
 x3 <- 1:16
 
-a <- cbind(x1 + runif(16),x2 + runif(16), x3 + runif(16))
-b <- cbind(x1 + runif(16),x2 + runif(16), x3 + runif(16))
+#a <- cbind(x1 + runif(16),x2 + runif(16), x3 + runif(16))
+#b <- cbind(x1 + runif(16),x2 + runif(16), x3 + runif(16))
+
+a <- cbind(x1 ,x2 , x3 )
+b <- cbind(x1 ,x2 , x3 + label )
+
 
 colnames(a) <- c('Turtle','Trout','Tuna')
 colnames(b) <- c('Turtle','Trout','Tuna')
@@ -87,16 +91,16 @@ names(targetCV) <- c('Tuna','Turtle','Trout')
 
 
 # run minCV
-b <- saMinCV(
+result <- saMinCV(
   x,
-  label,
-  iterations=20,
+  label+1,
+  iterations=1,
   cooling=0,
   targetCV=targetCV,
   sampleSize=8
 )
 
-summary(b) 
+summary(result) 
 
 
 
