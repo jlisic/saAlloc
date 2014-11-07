@@ -48,7 +48,6 @@ double * sa(
  
 
   //Rprintf("\n****************** init ****************\n");
-  //diagFunction(i,I,Q,A,dN,N);
  
   while( i < m ) {
 
@@ -103,12 +102,9 @@ double * sa(
 
     }
       
-    /* run a generic update function */ 
-    if( i % auxFunctionIter == 0 ) 
-      updateFunction(3, newI, I, Q, J, R, D, A, dN, N, NULL );   
-     
     /* update cost change */ 
     updateFunction(2, newI, I, Q, J, R, D, A, dN, N, &(costChange[i * costChangeSize ]) );   
+    //diagFunction(i,I,Q,A,dN,N);
 
     /* 6. ommitted, it is implemented as the while loop */ 
     /* 6. else goto 1 */
@@ -121,7 +117,6 @@ double * sa(
   /* output status */  
   Rprintf("Percent Complete: %d\%\n", (int) (i*100)/m  );
 
-  //diagFunction(i,I,Q,A,dN,N);
 
   return( costChange );
 }

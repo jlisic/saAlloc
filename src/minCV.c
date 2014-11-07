@@ -15,27 +15,20 @@ void minCV_init (
 
   size_t i,j;
   minCV_adminStructPtr a;
-  double ** V;
-  double * T;
-  double * Total;
-  double * W;
-  size_t H; 
-  size_t * NhSize;
-  double * sampleSize;
 
   
   /* variable used to sum up the total over each stratum */ 
 
   /* cast A back to somethine useable */
   a = (minCV_adminStructPtr) A; 
-  V = a->V;
-  T = a->T;
-  Total = a->Total;
-  W = a->W;
-  H = a->H;
-  NhSize = a->NhSize;
-  sampleSize = a->sampleSize;
-
+  double ** V = a->V;
+  double ** RV = a->RV;
+  double * T = a->T;
+  double * Total = a->Total;
+  size_t H = a->H;
+  size_t * NhSize = a->NhSize;
+  double * sampleSize = a->sampleSize;
+  double * RSampleSize = a->RSampleSize;
 
 
   /* Q has been allocated but there is nothing in it yet */
@@ -43,11 +36,20 @@ void minCV_init (
     Q[i] = 0;
     for(j=0; j < H; j++) {
       Q[i] += V[i][j] * NhSize[j]* NhSize[j]/( sampleSize[j] );
+
+      /* copy over V to RV */ 
+      RV[i][j] = V[i][j];
     }
     Q[i] = sqrt(Q[i]) / Total[i] - T[i];
+ 
   }
 
+  /* copy over the initial sample sizes to a set of 'Reserved' Sample sizes */ 
+  for( j=0; j < H; j++) {
+    RSampleSize[j] = sampleSize[j]; 
+  }
 
+  return;
 }
 
 
@@ -118,7 +120,6 @@ size_t minCV_randomState (
     trys++;
   }
   
-//  Rprintf("i = %d, Hi = %d, Hj = %d\n", (int) i, (int) I[i], (int) a->Hj );
 
   /* return index */
   return(i);
@@ -185,7 +186,6 @@ size_t minCV_getIndex( double * prob, double totalProbability ) {
 /* This is a function to update the sample size                              */
 void minCV_sampleSizeChange (
             void * A,              /* administrative data                     */
-            double * Q,            
             double * R,
             size_t dN,             /* number of distance matricies            */
             size_t N,              /* number of elements within a state       */
@@ -200,9 +200,11 @@ void minCV_sampleSizeChange (
   size_t H = a->H;
   double * T = a->T;
   size_t * NhSize = a->NhSize;
-  double ** V = a->V;
+  double ** RV = a->RV;
   double * Total = a->Total;
-  double * sampleSize = a->sampleSize;
+  double * sampleSize = a->sampleSize; /* sample Size */
+  double * RSampleSize = a->RSampleSize; /* sample Size for R */
+  size_t * RNhSize = a->RNhSize;
   size_t h;
   size_t i;
   size_t d;
@@ -215,12 +217,13 @@ void minCV_sampleSizeChange (
   if( iter == 0) return; 
 
   double * sampleVar = malloc( sizeof(double) * H * dN);
-  double * RLocal =  malloc( sizeof(double) * dN);
+  double * RLocal =    malloc( sizeof(double) * dN);
+  double * RGlobal =   malloc( sizeof(double) * dN);
 
   double minSampleSize = 2;
     
   /* the goal here is fairly simple 
-     * 0.0  we want to get the initial objective function, this is the typical max difference for CV's that violate the minCV constraint
+     * 0.0  we want to get the initial objective function, this is the typical max difference for CV's that violate the CV constraint
      * 1.0  now we randomly select a strata
      * 2.0  now we want to see which strata we can a 'draw' to.
    */
@@ -230,10 +233,10 @@ void minCV_sampleSizeChange (
   /* 0.1 pre-calculate the sample variance */ 
   for( d = 0; d < dN; d++) 
     for( h = 0; h < H; h++) 
-      sampleVar[H * d + h] = NhSize[h] * NhSize[h] * V[d][h];   
+      sampleVar[H * d + h] = RNhSize[h] * RNhSize[h] * RV[d][h];   
 
-  /* 0.2 copy Q to R */
-  for( d = 0; d < dN; d++) R[d] = Q[d];
+  /* 0.2 copy R to RGlobal */
+  for( d = 0; d < dN; d++) RGlobal[d] = R[d];
 
   /* iterate a fixed number of times */
   for( i = 0 ; i < iter; i++ ) {
@@ -244,14 +247,16 @@ void minCV_sampleSizeChange (
  
 
     /* only proceed if stratum Hi can be made smaller */ 
-    if( sampleSize[Hi] < minSampleSize + 1 ) continue; 
+    if( RSampleSize[Hi] < minSampleSize + 1 ) {
+      continue; 
+    }
 
     /* 2.0 calculate objective function change for moving to each strata */ 
     for( Hj = 0; Hj < H; Hj++ ) {
       maxRLocal = 0;
  
       /* if the exchange would make the sample size too big, we don't do it */ 
-      if( sampleSize[Hj] + 1 > NhSize[Hj] ) continue;
+      if( RSampleSize[Hj] + 1 > NhSize[Hj] ) continue;
 
       /* do not run over the selected state */
       if( Hj != Hi) {
@@ -260,20 +265,20 @@ void minCV_sampleSizeChange (
       
           for( h = 0; h < H; h++) {
             if( h == Hj ) { 
-              RLocal[d] += sampleVar[H*d+h] / (sampleSize[h] + 1); 
+              RLocal[d] += sampleVar[H*d+h] / (RSampleSize[h] + 1); 
             } else if( h == Hi ) {
-              RLocal[d] += sampleVar[H*d+h] / (sampleSize[h] - 1);
+              RLocal[d] += sampleVar[H*d+h] / (RSampleSize[h] - 1);
             } else { 
-              RLocal[d] += sampleVar[H*d+h] / sampleSize[h];
+              RLocal[d] += sampleVar[H*d+h] / RSampleSize[h];
             }
           }
 
           RLocal[d] = sqrt(RLocal[d])/Total[d] - T[d];
   
-          /* check if we are doing better than Q[d] for every violated d */ 
+          /* check if we are doing better than RGlobal[d] for every d that does not satisfy the CV constraint */ 
           if( RLocal[d] > 0 ) { 
            
-            if( RLocal[d] > R[d] ) {
+            if( RLocal[d] > RGlobal[d] ) {
               maxRLocal = INFINITY; 
               break;
             } 
@@ -285,7 +290,7 @@ void minCV_sampleSizeChange (
         /* check if we are doing better */ 
         if( maxRLocal < INFINITY ) {
           optHj = Hj;
-          for( d = 0; d < dN; d++) R[d] = RLocal[d];
+          for( d = 0; d < dN; d++) RGlobal[d] = RLocal[d];
         } 
 
       }
@@ -294,16 +299,16 @@ void minCV_sampleSizeChange (
     
     /* 3.0 if there are reductions in objective function make a move to minimize CV */
   
-    /* check if H */
-    if( optHj < H ) {
-      for( d = 0; d < dN; d++) Q[d] = R[d];
-      sampleSize[optHj] += 1.0;
-      sampleSize[Hi] -= 1.0;
+    if( optHj < H ) {  /* check if the final result minimized the objective function for all H */
+      for( d = 0; d < dN; d++) R[d] = RGlobal[d]; /* assign RGlobal[d] to R[d] */
+      RSampleSize[optHj] += 1.0;
+      RSampleSize[Hi] -= 1.0;
     }
 
   }
 
   free(RLocal);
+  free(RGlobal);
   free(sampleVar);
   return;
 }
@@ -331,58 +336,64 @@ double minCV_costChange (
   double * T = a->T;
   size_t * size = a->size;
   size_t * NhSize = a->NhSize;
+  size_t * RNhSize = a->RNhSize;
   double ** V = a->V;
+  double ** RV = a->RV;
   double * Total = a->Total;
   size_t Hj = a->Hj;               /* get our chosen strata */
   double * sampleSize = a->sampleSize;
+  double * RSampleSize = a->RSampleSize;
   double delta = 0;
   size_t h;
   double fixedVar;
   size_t  Hi, d; 
   size_t preserveSatisfied = a->preserveSatisfied;
 
-  double NhSizeHj, NhSizeHi, nhSizeHi, nhSizeHj;
-
   /* figure out change in cost */
   Hi = I[i]; 
+    
+  /* before we continue on we need to ensure that RNhSize and RSample Size reflect the current State */ 
+  for( h = 0; h < H; h++) {
+    RNhSize[h] = NhSize[h]; 
+    RSampleSize[h] = sampleSize[h]; 
+  }
+    
+  /* proposed new population size for Hj */
+  RNhSize[Hj] = NhSize[Hj] + size[i]; 
 
-  
-  /*this calculates psuedo nh's for each stratum*/
+  /* proposed new population size for Hi */
+  RNhSize[Hi] = NhSize[Hi] - size[i]; 
+       
+
+  /* update the CV differences */ 
   for(d = 0; d < dN; d++) {
-
-
     /* get the variance total for the otehr strata */
     fixedVar = 0;
 
     for( h = 0; h < H; h++) {
-     if( (h != Hi)  & (h != Hj) ) {
-       fixedVar += NhSize[h] * NhSize[h] * V[d][h] / sampleSize[h];   
+     if( (h != Hi) & (h != Hj) ) {
+       RV[d][h] = V[d][h]; /* copy over any prior changes */
+       fixedVar += NhSize[h] * NhSize[h] * RV[d][h] / sampleSize[h];   
      } 
     }
 
-    /* proposed new population size for Hj */
-    NhSizeHj = (double) NhSize[Hj] + size[i]; 
-
-    /* proposed new population size for Hi */
-    NhSizeHi = (double) NhSize[Hi] - size[i]; 
-
-    /* proposed new sample size for Hj */
-    nhSizeHj = (double) sampleSize[Hj];// + size[i]; 
-
-    /* proposed new sample size for Hi */
-    nhSizeHi = (double) sampleSize[Hi];// - size[i]; 
-    
+    /* update RV */
+    RV[d][Hj] =  (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] ) / (double) ( (RNhSize[Hj] - 1) * RNhSize[Hj] );
+    RV[d][Hi] =  (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] ) / (double) ( (RNhSize[Hi] - 1) * RNhSize[Hi] );
+  
     /* get the distance between */
     R[d] =
       sqrt( fixedVar + 
-        (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] ) / 
-        ( (NhSizeHj - 1) * (nhSizeHj) ) * NhSizeHj 
-        + 
-        (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] ) / 
-        ( (NhSizeHi - 1) * (nhSizeHi) ) * NhSizeHi 
+       (RNhSize[Hj] * RNhSize[Hj]) / sampleSize[Hj] * RV[d][Hj]  + 
+       (RNhSize[Hi] * RNhSize[Hi]) / sampleSize[Hi] * RV[d][Hi] 
       ) / Total[d] - T[d];
+  } 
+  
+  /* update the allocation */ 
+  minCV_sampleSizeChange ( A, R, dN, N, a->sampleIter);
 
-    /* get the max change in CV */
+  /* get the max change in CV */
+  for( d = 0; d < dN; d++) {
     if( R[d] > 0 ) {
 
       /* if preserveSatisfied == 1 then any change that would violate a met 
@@ -453,19 +464,22 @@ void minCV_update (
   
   /* optimize sample size */
   if ( accept == 3) { 
-    minCV_sampleSizeChange ( A, Q, R, dN, N, a->sampleIter);
+    //minCV_sampleSizeChange ( A, Q, R, dN, N, a->sampleIter);
     return;
   }
+  
 
   size_t l, Hi; 
   double dil ; 
 
   double *** C = a->C;
   double **  V = a->V;
+  double **  RV = a->RV;
   //size_t *   Nh = a->Nh;
   double *   NhAcres = a->NhAcres;
   size_t *   Nh = a->Nh;
   size_t *   NhSize = a->NhSize;
+  size_t *   RNhSize = a->RNhSize;
   size_t *   size = a->size;
   double *   acres = a->acres;
   size_t     Hj = a->Hj;
@@ -475,6 +489,7 @@ void minCV_update (
   double * prob = a->prob;
   double * probMatrix = a->probMatrix;
   double totalProbability = a->totalProbability;
+  double * RSampleSize = a->RSampleSize;
 
   /* figure out change in cost */
   Hi = I[i];
@@ -484,7 +499,6 @@ void minCV_update (
 
   /* update prob */
   totalProbability = totalProbability - prob[i];
-
   prob[i] = 1 - probMatrix[ H * i + I[i] ];
 
   /* update total prob */
@@ -503,36 +517,24 @@ void minCV_update (
   /* if it is an end point, push back the end point */ 
   if( L[Hj][l] == N+1 ) L[Hj][l+1] = N+1;  
 
+  /* update sample size */
+  for( d = 0; d < H; d++) sampleSize[d] = RSampleSize[d];
+
+  /* update Q */ 
+  for( d=0; d < dN; d++) Q[d] = R[d];
 
   if(Hi == Hj) return; 
 
-  /* update the contribution */
-  /* to update the contribution we need to subtract dik from the column that i's strata was
-   * previously associated with for every k, we also need to add djk to that stratum.  This
-   * needs to be done for each commodity */
-
-
-  /* since it is an update we actually take the time to calculate things correctly */
-
-  /* renember to update NhSize and Size */
-
-
+  /* update R, C  and V */
   for( d=0; d < dN; d++) {
-    Q[d] = R[d];
       
     /* update the variance, this must be done before C gets updated */
-    V[d][Hj] = 
-        (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj]) / ( (double)  (NhSize[Hj] + size[i] - 1) * (NhSize[Hj] + size[i] ) );
-
-    V[d][Hi] = 
-        (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi]) / ( (double)  (NhSize[Hi] - size[i] - 1) * (NhSize[Hi] - size[i] ) ); 
-
-
+    V[d][Hj] = RV[d][Hj]; 
+    V[d][Hi] = RV[d][Hi]; 
 
    for( l = 0; l < N; l++) {
      dil = getDistX(i,l,x,k,d,N,squaredEuclidianMeanDist); 
     
-
      /* Hj is i's new index */
      C[d][l][Hj] =  C[d][l][Hj] + dil; 
      C[d][l][Hi] =  C[d][l][Hi] - dil;  
@@ -542,14 +544,11 @@ void minCV_update (
   Nh[Hi]--;
   Nh[Hj]++;
 
-  NhSize[Hi] -= size[i];
-  NhSize[Hj] += size[i];
+  NhSize[Hi] = RNhSize[Hi];
+  NhSize[Hj] = RNhSize[Hj];
 
   NhAcres[Hi] -= acres[i];
   NhAcres[Hj] += acres[i];
-
-
-
   
   return;
 }
@@ -626,6 +625,7 @@ void * minCV_packSubstrata(
   
   /* NhSize is the total number of segments (vector) */
   size_t * NhSize = minCV_labelTotalSegments( I, N, H, size);
+  size_t * RNhSize = malloc( sizeof(size_t) * H);
 
   /* NhSize is the total number of segments (vector) */
   double * NhAcres = minCV_labelTotalAcres( I, N, H, acres);
@@ -655,7 +655,12 @@ void * minCV_packSubstrata(
    
   /* create variance matrix for each [commodity][strata] */
   double ** V = minCV_createVarMatrix( I, dN, N, k, H, x, L, Nh, NhSize);
-  
+ 
+  /* create a place to store temporary variances */ 
+  double ** RV = malloc(sizeof(double * ) * dN );
+  for( i = 0; i < dN; i++) RV[i] = malloc(sizeof(double) * H );
+
+
   /* create variance matrix for each [commodity]*/
   double * Total = malloc( sizeof( double ) * dN );
   for( i =0; i < dN; i++) 
@@ -663,6 +668,7 @@ void * minCV_packSubstrata(
  
   /* get the sample Size */ 
   double * sampleSize = (double *) malloc( sizeof( double ) * H );
+  double * RSampleSize = (double *) malloc( sizeof( double ) * H );
   for( i =0; i < H; i++) 
     sampleSize[i] = aDbl[N + 3*dN + i]; 
  
@@ -680,6 +686,7 @@ void * minCV_packSubstrata(
   packedStruct->H = H;
   packedStruct->Nh = Nh;
   packedStruct->NhSize = NhSize;
+  packedStruct->RNhSize = RNhSize;
   packedStruct->NhAcres = NhAcres;
   packedStruct->NhMax = NhMax;
   packedStruct->acres = acres;
@@ -689,6 +696,7 @@ void * minCV_packSubstrata(
   packedStruct->T = T;
   packedStruct->W = W;
   packedStruct->V = V;
+  packedStruct->RV = RV;
   packedStruct->Total = Total;
   packedStruct->x = x;
   packedStruct->k = k;
@@ -696,6 +704,7 @@ void * minCV_packSubstrata(
   packedStruct->temp = aDbl[NDbl-2];
   packedStruct->acreDif = aDbl[NDbl-1 ];
   packedStruct->sampleSize = sampleSize;
+  packedStruct->RSampleSize = RSampleSize;
   
   return( (void *) packedStruct );
 }
@@ -740,6 +749,8 @@ void minCV_deleteSubstrata( minCV_adminStructPtr  a, size_t dN, size_t N )
   free( a->sampleSize); 
   a->sampleSize = NULL; 
   
+  free( a->RSampleSize); 
+  a->RSampleSize = NULL; 
 
   /* now the MDA */
   freeMDA( (void*) a->L, a->H);
@@ -747,6 +758,9 @@ void minCV_deleteSubstrata( minCV_adminStructPtr  a, size_t dN, size_t N )
   
   freeMDA( (void*) a->V, dN);
   a->V = NULL; 
+  
+  freeMDA( (void*) a->RV, dN);
+  a->RV = NULL; 
   
   for(i = 0; i < dN; i++)
     freeMDA( (void*) (a->C)[i], N);
@@ -1045,6 +1059,7 @@ double *** minCV_createContribMatrix( size_t * label, size_t dN, size_t N, size_
 
 
   /* aggregate */
+  /* add a pragma openmp around this */
   for( i = 0; i < dN; i++)
     for( j = 0; j < N; j++)
       for( m = 0; m < H; m++)

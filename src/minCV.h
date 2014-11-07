@@ -38,9 +38,11 @@ typedef struct
   double * T;   /* target variance vector */
   double * W;   /* within variance vector */
   double ** V;  /* variance matrix */
+  double ** RV;  /* variance matrix for R*/
   double * x;   /* A link to the Data Set */
   double * Total; /* Total size */
   double * sampleSize; /* Total size */
+  double * RSampleSize; /* Sample Size used for R */
   double temp;  /* temp denominator for cooling function*/
   double * acres;   /* not used */
   double * NhAcres; /* not used */
@@ -50,6 +52,7 @@ typedef struct
   size_t sampleIter;
   size_t * size;
   size_t * NhSize;
+  size_t * RNhSize;
   double acreDif;
   size_t preserveSatisfied;
 } 
@@ -186,7 +189,6 @@ size_t minCV_getMoveStrata( size_t i, size_t * I, double * prob, double * probMa
 /* function to minimize the sample design */
 void minCV_sampleSizeChange (
             void * A,              /* administrative data, destructive to sampleSize    */
-            double * Q,            /* current cost, destructive */
             double * R,            /* new cost, destructive */
             size_t dN,             /* number of distance matricies            */
             size_t N,              /* number of elements within a state       */

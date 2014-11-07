@@ -103,5 +103,9 @@ result <- saMinCV(
 summary(result) 
 
 
-
+truVar <- aggregate(x,         
+by=list(        
+rep(label+1,each=2)*100      
++ rep(1:2,length(label))      
+),var)                   
 
