@@ -20,10 +20,10 @@ label <- c(
            0, # 10
            0, # 11
            1, # 12
-           1, # 13
-           1, # 14
-           1, # 15
-           1  # 15
+           2, # 13
+           2, # 14
+           2, # 15
+           2  # 15
            )
 
 x1 <- c(
@@ -66,13 +66,13 @@ x2 <- c(
 x <- cbind(x1,x2,x2)
 
 #target variance
-targetCV <- c(.01,.01,.01)
+targetCV <- c(.00,.00,.00)
 
 # run minCV
 b <- saMinCV(
   x,
   label,
-  iter=200,
+  iter=2000000,
   cooling=0,
   targetCV=targetCV,
   sampleSize=8
@@ -91,7 +91,7 @@ for( i in 1:nrow(accept) ) {
   label.cv[ accept[i,'from'] ] <- accept[i,'to'] 
   test.cv  <- saAlloc:::.cv( x, strata=label.cv, sampleSize=accept[i,names(b$sampleSize)] )
 
-  check <- rbind( check , c( accept[i,8:10], test.cv, accept[i,8:10] - test.cv) )
+  check <- rbind( check , c( accept[i,9:11], test.cv, accept[i,9:11] - test.cv) )
 }
 
 print(check)

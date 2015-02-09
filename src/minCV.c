@@ -104,7 +104,7 @@ size_t minCV_randomState (
       
       a->Hj = minCV_getMoveStrata( i, I, prob, probMatrix, N, H);
   
-      if( a->Hj == N+1 ) i = N+1;
+      if( a->Hj == N+1 ) i = N+1; /* i = N+1 is used to signal to sa that no move can be made */
   
   
     } else {
@@ -380,7 +380,8 @@ double minCV_costChange (
     /* update RV */
     RV[d][Hj] =  (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] ) / (double) ( (RNhSize[Hj] - 1) * RNhSize[Hj] );
     RV[d][Hi] =  (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] ) / (double) ( (RNhSize[Hi] - 1) * RNhSize[Hi] );
-  
+ 
+
     /* get the distance between */
     R[d] =
       sqrt( fixedVar + 
@@ -601,7 +602,6 @@ void * minCV_packSubstrata(
   
   /* H is the number of labels */
   size_t H =  minCV_labelCount( I, N );
-  
 
   /* created to take care of the convert issue */ 
   size_t * size       = malloc(sizeof(size_t) * N );
@@ -641,8 +641,6 @@ void * minCV_packSubstrata(
    * stratum h.  Rows are items, and columns are strata.
    */
 
-  double *** C = minCV_createContribMatrix( I, dN, N,k, H, x, L, Nh);
-  
   /* get target variance values */
   double * T = malloc( sizeof( double ) * dN );
   for( i =0; i < dN; i++) 
@@ -654,11 +652,16 @@ void * minCV_packSubstrata(
     W[i] = aDbl[N + dN + i]; 
    
   /* create variance matrix for each [commodity][strata] */
-  double ** V = minCV_createVarMatrix( I, dN, N, k, H, x, L, Nh, NhSize);
+  double *** mu = minCV_createMeanMatrix( I, dN, N, k, H, x, L, Nh, NhSize);
+  double *** V = minCV_createVarMatrix( I, dN, N, k, H, x, L, mu, Nh, NhSize);
  
   /* create a place to store temporary variances */ 
-  double ** RV = malloc(sizeof(double * ) * dN );
-  for( i = 0; i < dN; i++) RV[i] = malloc(sizeof(double) * H );
+  double *** RV = double3DMatrix(dN,H,k); 
+
+  for( i = 0; i < dN; i++) 
+    for( h = 0; h < H; h++) 
+      for( l = 0; l < k; l++) 
+        RV[i][h][l] = V[i][h][l]; 
 
 
   /* create variance matrix for each [commodity]*/
@@ -783,11 +786,11 @@ void minCV_diag(
             size_t N    /* number of elements within a state */
     ) {
 
-  double *** C;
+  double *** V;
+  double *** mu;
   size_t H, NhMax, d;
   size_t * Nh;
   double * T;
-  double ** V;
   double * Total;
   double * acres;
   size_t * size;
@@ -797,12 +800,12 @@ void minCV_diag(
 
   /* cast A back to somethine useable */
   a = (minCV_adminStructPtr) A; 
-  C = a->C;
   H = a->H;
   Nh = a->Nh;
   NhMax = a->NhMax;
   T = a->T;
   V = a->V;
+  mu = a->mu;
   Total = a->Total;
 
 
@@ -816,11 +819,14 @@ void minCV_diag(
   Rprintf("\n************************* i = %d **************************\n",(int) i);
   Rprintf("\nNhMax: %d\n", (int) NhMax);
  
- /* 
   for( d =0; d < dN; d++) 
-    Rprintf("\nC[%d]\n",(int) d),
-    printMatrixFullDbl(C[d], N, H ); 
-*/
+    Rprintf("\nV[%d]\n",(int) d),
+    printMatrixFullDbl(V[d], N, H ); 
+  
+  for( d =0; d < dN; d++) 
+    Rprintf("\nmu[%d]\n",(int) d),
+    printMatrixFullDbl(mu[d], N, H ); 
+
 
   Rprintf("\nQ\n");
   Rprintf("sqrt(n) * CV_j - TCV_j\n");
@@ -867,9 +873,6 @@ void minCV_diag(
   for( d =0; d < dN; d++) 
     Rprintf("%d:  %f\n",(int) d, T[d]); 
   
-  Rprintf("\nV\n");
-    printMatrixFullDbl(V, dN, H ); 
-
   Rprintf("\nTotal\n");
   for( d =0; d < dN; d++) 
     Rprintf("%d:  %f\n",(int) d, Total[d]); 
@@ -1035,73 +1038,6 @@ size_t ** minCV_labelCreateMaster( size_t * label, size_t N, size_t H, size_t Nh
 
   return(L);
 }
-
-
-/* creates a matrix of differences between item i, and all the points in a 
- * stratum h.  Rows are items, and columns are strata.
- */ 
-double *** minCV_createContribMatrix( size_t * label, size_t dN, size_t N, size_t k, size_t H, double * x, size_t ** L, size_t * Nh)
-{
-
-  size_t i,j,m,l;
-
-  /* allocate memory for C matrix */
-  double *** C = malloc(sizeof(double ** ) * dN );
-
-  for( i = 0; i < dN; i ++)
-  {
-    C[i] = malloc(sizeof(double * ) * N );
-
-    for( j = 0; j < N; j ++) {
-      C[i][j] = malloc(sizeof(double) * H );
-    }
-  }
-
-
-  /* aggregate */
-  /* add a pragma openmp around this */
-  for( i = 0; i < dN; i++)
-    for( j = 0; j < N; j++)
-      for( m = 0; m < H; m++)
-      {
-      C[i][j][m] = 0;
-      for( l = 0; l < Nh[m]; l++)
-        C[i][j][m] += getDistX(j,L[m][l],x,k,i,N,squaredEuclidianMeanDist); 
-      }
-
-  return(C);
-}
-
-
-
-
-/* function that creates a variance MDA (matrix) [commodity][strata] */
-double ** minCV_createVarMatrix( size_t * label, size_t dN, size_t N, size_t k, size_t H, double * x, size_t ** L, size_t * Nh, size_t * NhSize)
-{
-
-  size_t i,j,m,l;
-
-  /* allocate memory for C matrix */
-  double ** V = malloc(sizeof(double * ) * dN );
-
-
-  for( i = 0; i < dN; i++) V[i] = malloc(sizeof(double) * H );
-
-  /* aggregate */
-  for( i = 0; i < dN; i++)
-    for( j = 0; j < H; j++)
-    {
-    /* set initial sum to 0 */
-    V[i][j] = 0;
-    for( m = 0; m < Nh[j]; m++)
-      for( l = m+1; l < Nh[j]; l++) 
-        V[i][j] += getDistX(L[j][m],L[j][l],x,k,i,N,squaredEuclidianMeanDist); 
-      V[i][j] = V[i][j] / ((NhSize[j] -1) * NhSize[j]);
-    }
-    
-  return(V);
-}
-
 
 
 

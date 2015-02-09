@@ -12,6 +12,7 @@
 #include "Rmath.h"
 #include "dist.h"
 #include "sa.h"
+#include "cv.h"
 
 #ifdef CLI
 #define MATHLIB_STANDALONE /* set for stand alone R.h, R from C  */
@@ -34,11 +35,10 @@ typedef struct
   size_t NhMax; /* max stratum size*/
   size_t * Nh;  /* size of strata vector */
   size_t ** L;  /* label matrix */
-  double *** C; /* contribution tensor */
+  double *** V; /* contribution tensor */
+  double *** RV;  /* variance matrix for R*/
   double * T;   /* target variance vector */
   double * W;   /* within variance vector */
-  double ** V;  /* variance matrix */
-  double ** RV;  /* variance matrix for R*/
   double * x;   /* A link to the Data Set */
   double * Total; /* Total size */
   double * sampleSize; /* Total size */
@@ -169,16 +169,8 @@ size_t minCV_arrayMaxSize_t( size_t * a, size_t n );
 /* quick function to determine the maximum index in a double array */
 size_t minCV_arrayMaxIndexDbl( double * a, size_t n ); 
 
-  /* this matrix identifies each item with all other items that can have labels assigned */
+/* this matrix identifies each item with all other items that can have labels assigned */
 size_t ** minCV_labelCreateMaster( size_t * label, size_t N, size_t H, size_t NhMax );
-
-/* creates a matrix of differences between item i, and all the points in a 
- * stratum h.  Rows are items, and columns are strata.
- */ 
-double *** minCV_createContribMatrix( size_t * label, size_t dN, size_t N, size_t k, size_t H, double * x, size_t ** L, size_t * Nh);
-
-/* function that creates a variance MDA (matrix) [commodity][strata] */
-double ** minCV_createVarMatrix( size_t * label, size_t dN, size_t N, size_t k, size_t H, double * x, size_t ** L, size_t * Nh, size_t * NhSize);
 
 /* function to select an index */
 size_t minCV_getIndex( double * prob, double totalProbability ); 

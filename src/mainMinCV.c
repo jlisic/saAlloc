@@ -82,6 +82,7 @@ void R_minCV (
   
   /***** 1.0 RUN OUR ALGORITHM  *****/
 
+  /*
   Rprintf("Starting Run\n");
 
    sa( 
@@ -104,6 +105,7 @@ void R_minCV (
     minCV_cool,          // cooling schedule                              // 
     minCV_diag           // diagnostic printout function                  //
     ); 
+  */
 
   /***** 2.0 WRITE RESULTS *****/
 
