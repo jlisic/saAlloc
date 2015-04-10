@@ -1,17 +1,18 @@
-saMinCV <-
-function(
+saMinCV <- function(
   x,
   label,
   targetCV,
   sampleSize,
   weightMatrix,            # missing handled
+  domainMatrixList,
   iterations=1000,
-  sampleIterations=100,
-  sampleUpdateIterations=100,
-  cooling=0,
-  segments=rep(1,length(label)),
-  PSUAcres=rep(1,length(label)),
-  targetVarWithin=rep(0,ncol(x)),
+  sampleSizeIterations=3,
+  recalcIterations=10000,
+  locationAdjustment,
+  scaleAdjustment,
+  p = 2,                   # l2 norm of the penalty function
+  penalty = -1,            # negative penalties are ignored
+  cooling = 0,
   preserveSatisfied=TRUE
   ) {
 
@@ -33,14 +34,11 @@ function(
 
   # get rows etc... 
   N <- length(label)            # number of observations
-  d <- ncol(x)                  # number of distinct characteristics  (independent subsets of the covariance matrix)
-  k <- length(c(x)) / ( N * d)  # dimension of each of the distinct characteristics 
+  K <- ncol(x)                  # number of distinct characteristics  (independent subsets of the covariance matrix)
+  R <- length(c(x)) / (N * K)  # dimension of each of the distinct characteristics 
                                 # (dependent members of the subsets of the covariance matrix)
   H <- length(unique.label)    # number of strata
 
-  # need to re-label
-  acceptRate <- rep(0,(5 + H + d)*iterations) 
-  cost <- rep(1,d) 
   
   #################### PROBABILITY ######################################
  
@@ -52,56 +50,82 @@ function(
   # check prob
   if(( nrow(weightMatrix) != N) | (ncol(weightMatrix) != H )) {
     stop( sprintf("probMatrixability matrix (weightMatrix) does not have correct dimensions\n Needed (nrow = %d, ncol = %d), provided (nrow = %d, ncol = %d)\n",
-                 N, d, nrow(weightMatrix), ncol(weightMatrix) ) ) 
+                 N, K, nrow(weightMatrix), ncol(weightMatrix) ) ) 
   }
 
   # get max prob
-  prob <- 1 - apply(cbind(rlabel,weightMatrix), 1, function(x) x[x[1]+2] ) 
+  prob <- apply(cbind(rlabel,weightMatrix), 1, function(x) max(x[-1* c(1, x[1]+2)]) ) 
 
   totalProb <- sum(prob)
   
   # create row major matrix for input to C program
   weightMatrix <- c(t(weightMatrix))
-
-
-  #################### TOTALS ######################################
-
-  # get total 
-  total <- colSums(x)/k
   
-  #################### SAMPLE SIZE ######################################
-  
-  if(sampleUpdateIterations < 0 ) stop("sampleUpdateIter is not positive") 
-  if( round(sampleUpdateIterations) != sampleUpdateIterations ) stop("sampleUpdateIter is not an integer ") 
-   
-  
-  #################### TARGET CV ######################################
-  # handle sample size 
-
-  # stop if the sampleSize lenght does not equal the number of distinct elements
-  if( d != length(targetCV) ) {
-    stop( "ncol(x) != length(targetCV)" )  
-  # warning if there are no names 
-  } else if( length(names(targetCV)) == 0 ) {
-    warning( "targetCV has no names, assuming that the targetCV are in the same order as x." ) 
-  # error if there are names but don't match what we find in unique.label
-  } else if( !identical( sort(names(targetCV)), sort(colnames(x)))  ) {
-    stop( "targetCV names do match column names of x" ) 
-  } else if( anyDuplicated( names(targetCV) ) != 0  ) {
-    stop( "targetCV names do exist but are not unique" ) 
-  # at this point everthing seems ok, so reorder the sample size
+  #################### LOCATION ADJUSTMENT ######################################
+ 
+  # location adjustment is N x K  
+  if( missing( locationAdjustment ) ) {
+    C_locationAdjustment = -1
   } else {
-    targetCV <- targetCV[ colnames(x) ] 
+    C_locationAdjustment = c(locationAdjustment) 
+  }
+ 
+
+  #################### SCALE ADJUSTMENT #########################################
+ 
+  # location adjustment is H x K  
+  if( missing( scaleAdjustment ) ) {
+    C_scaleAdjustment = -1
+  } else {
+    C_scaleAdjustment = c(scaleAdjustment) 
   }
   
   
+  #################### DOMAIN MATRIX ######################################
+  # it is assumed that the domain matrix is a list of matricies of dim K x J of length H
+  # where K is the number of coi, 
+  # J is the number of domains 
+  # and H is the number of strata
+  # if it is missing this list will be substituted with a list of identity matricies.
+
+  if( missing(domainMatrixList) ) {
+    J <- K
+    domainMatrix <- rep(c(diag(K)),H)
+  } else {
+    J <- ncol(domainMatrixList[[1]])
+    if( J < K) stop("Error J < K")
+    if( J == K) {
+      domainMatrix <- rep(c(diag(K)),H)
+    } else {
+      domainMatrixTmp <- c()
+      for( h in 1:H ) domainMatrixTmp <- c(domainMatrixTmp, c( t(domainMatrixList[[h]]) ))
+      domainMatrix <- domainMatrixTmp 
+    }
+
+  }
+
+  #################### PENALTY ######################################
+
+  if( sum( penalty < 0) > 1 ) {
+    penalty <- rep(0,J)
+  } else {
+
+    if( length(penalty) == 1 )  {
+      penalty <- rep(0,J)
+    } else {
+      if( length(penalty) != J ) {
+        stop("penalty is not of length 1 or J")
+      } 
+    }
+
+  }
   
-  #################### OPTIMAL SAMPLE SIZE ######################################
+  #################### INITIAL SAMPLE SIZE ######################################
   
   # handle sample size 
   if( length(sampleSize) > 1 ) {
 
-    # stop if the sampleSize lenght does not equal the number of distinct elements
+    # stop if the sampleSize length does not equal the number of strata 
     if( H != length(sampleSize) ) {
       stop( "H != length(sampleSize)" )  
     # warning if there are no names 
@@ -133,50 +157,84 @@ function(
   }
   # final sample size check 
   if( sum(sampleSize < 2) > 0 ) stop("Each element of sampleSize must be of at least 2")
+  
+  
+  #################### ITERATIONS ######################################
+  
+  if(iterations < 0 ) stop("Iterations is not positive") 
+  if( round(iterations) != iterations ) stop("Iterations is not an integer ") 
+ 
 
+  #################### SAMPLE ITERATIONS ######################################
+  
+  if(sampleSizeIterations < 0 ) stop("sampleSizeIterations is not positive") 
+  if( round(sampleSizeIterations) != sampleSizeIterations ) stop("sampleSizeIterations is not an integer ") 
+ 
 
-  # group data together for input
-  adminDbl <- c( 
-    PSUAcres, 
-    targetCV, 
-    targetVarWithin, 
-    total, 
-    sampleSize, 
-    prob, 
-    weightMatrix, 
-    totalProb,
-    cooling, 
-    tolSize 
-  )
-  adminDblLength <- length( adminDbl )
-  adminInt <- c(segments, sampleIterations, as.integer(preserveSatisfied)) 
-  adminIntLength <- length( adminInt )
+  #################### SAMPLE SIZE ######################################
+  
+  if(recalcIterations < 0 ) stop("recalcIterations is not positive") 
+  if( round(recalcIterations) != recalcIterations ) stop("recalcIterations is not an integer ") 
+   
+  
+  #################### TARGET CV ######################################
+  # handle sample size 
 
-  dup <- c() 
+  # stop if the sampleSize lenght does not equal the number of distinct elements
+  if( J != length(targetCV) ) {
+    stop( "ncol(x) != length(targetCV)" )  
+  # warning if there are no names 
+  } else if( length(names(targetCV)) == 0 ) {
+    warning( "targetCV has no names, assuming that the targetCV are in the same order as x." ) 
+  # error if there are names but don't match what we find in unique.label
+  } else if( !identical( sort(names(targetCV)), sort(names(domainMatrix)))  ) {
+    stop( "targetCV names do match column names of x" ) 
+  } else if( anyDuplicated( names(targetCV) ) != 0  ) {
+    stop( "targetCV names do exist but are not unique" ) 
+  # at this point everthing seems ok, so reorder the sample size
+  } else {
+    targetCV <- targetCV[ names(domainMatrix) ] 
+  }
+  
+  costChangeSize <- 6 + H + J  
+  
+  # need to re-label
+  acceptRate <- rep(0,costChangeSize*(iterations+1)) 
 
-  costChangeSize <- 5 + H + d 
+#  print(paste( "N", N))
+#  print(paste( "l(x)", length(c(x))))
+#  print(paste( "K", K))
+#  print(paste( "R", R))
+#  print(paste( "H", H))
+#  print(paste( "penalty: ", penalty))
 
 
   #################### RUN C FUNCTION ######################################
-  
-r.result <- .C("R_minCV",
-  as.double(c(x)),            #checked       1
-  as.integer(k),              #checked       2
-  as.integer(d),              #checked       3
-  as.integer(N),              #checked       4
-  as.integer(iterations),     #checked       5
-  as.integer(rlabel),          #checked       6
-  as.double(cost),            #checked Q     7
-  as.double(adminDbl),        #checked       8
-  as.integer(adminInt),       #checked       9
-  as.integer(adminIntLength), #checked      10
-  as.integer(adminDblLength), #checked      11
-  as.integer(dup),            #checked      12
-  as.double(acceptRate),      #checked      13
-  as.double(sampleSize),      #checked      14
-  as.integer(sampleUpdateIterations),
-  as.integer(costChangeSize)
-)
+  r.result <- .C("R_minCV",
+    as.double(c(x)),                  # 1 
+    as.integer(N),                    # 2 
+    as.integer(J),                    # 2
+    as.integer(K),                    # 4 
+    as.integer(H),                    # 5
+    as.integer(R),                    # 6
+    as.integer(sampleSizeIterations), # 7     
+    as.integer(rlabel),               # 8 
+    as.integer(domainMatrix),         # 9
+    as.double(prob),                  #10
+    as.double(weightMatrix),          #11
+    as.double(targetCV),              #12
+    as.double(C_locationAdjustment),    #13
+    as.double(C_scaleAdjustment),       #14
+    as.double(p),                     #15
+    as.double(penalty),               #16
+    as.double(sampleSize),            #17
+    as.double(acceptRate),            #18
+    as.double(cooling),                  #19
+    as.integer(recalcIterations),     #20  /* how often to update the counter */
+    as.integer(costChangeSize),       #21
+    as.integer(iterations),           #22     
+    as.integer(preserveSatisfied)     #23
+  )
 
   runTime <- proc.time() - Cprog
  
@@ -185,28 +243,53 @@ r.result <- .C("R_minCV",
 
   # get colnames for x 
   if( is.null(colnames(x)) ) {
-    x.colnames <- sprintf("%d",1:d)
+    x.colnames <- sprintf("%d",1:K)
   } else {
     x.colnames <- colnames(x)
   }
 
+  a <<- unlist(r.result[18])
+
   ## change and other accept data
-  a <- matrix(unlist(r.result[13]),ncol=5 + H + d,byrow=T)
-  colnames(a) <- c( 'change', 'U', 'accepted','from','to', 
+  a <- matrix(unlist(r.result[18]),ncol=costChangeSize ,byrow=T)
+  colnames(a) <- c( 'change', 'U', 'T','selected','from','to', 
                    sprintf("n_%d",unique.label), 
                    x.colnames
                    )
+
+  
+  a.names <- c(colnames(a),'accepted')
+  a <- cbind(a, as.numeric(a[,'U'] <= a[,'T']))
+  colnames(a) <- a.names
+
+
   ## label
-  newRlabel <- sapply(unlist(r.result[6]), function(x) unique.label[x+1] ) 
+  newRlabel <- sapply(unlist(r.result[8]), function(x) unique.label[x+1] ) 
    
   ## sample size 
-  newSampleSize <- unlist(r.result[14]) 
-  names(newSampleSize) <- sprintf("n_%d",unique.label)
+  newSampleSize <- unlist(r.result[17]) 
   names(sampleSize) <- sprintf("n_%d",unique.label)
+  names(newSampleSize) <- sprintf("n_%d",unique.label)
 
   ## final and initial CVs
-  CVStart <- .cv( x, rlabel, sampleSize, average=TRUE) 
-  CV      <- .cv( x, newRlabel, newSampleSize, average=TRUE) 
+  if( missing(locationAdjustment) & missing(scaleAdjustment) ) { 
+    print("no adjustment")
+    CVStart  <- .cv2( x, rlabel, newSampleSize, average=TRUE)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE )
+  } else if( missing(locationAdjustment) )  { 
+    print("just scale adjustment")
+    CVStart  <- .cv2( x, rlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
+  } else if( missing(scaleAdjustment) )  { 
+    print("just location adjustment")
+    CVStart  <- .cv2( x, rlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment)
+  } else {
+    print("both adjustments")
+    CVStart  <- .cv2( x, rlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
+  }
+
 
   ## strata Size
   strataSizeStart <- aggregate(rlabel, by=list(rlabel), length)
@@ -218,20 +301,9 @@ r.result <- .C("R_minCV",
   strataSize <- strataSize[,2,drop=FALSE] 
 
 
-  ## auxiliary size constraint (acres)
-  acresStart <- aggregate(PSUAcres*segments, by=list(rlabel), sum)
-  rownames(acresStart) <- acresStart$Group.1
-  acresStart <- acresStart[,2,drop=FALSE] 
-
-  acres      <- aggregate(PSUAcres*segments, by=list(newRlabel), sum)
-  rownames(acres) <- acres$Group.1
-  acres <- acres[,2,drop=FALSE] 
-
-
-
   myList <- list(
     "accept"=a, 
-    "cost"=unlist(r.result[7]), 
+#    "cost"=unlist(r.result[7]), 
     "label"=newRlabel, 
     "sampleSize"=newSampleSize,
     "sampleSizeStart"=sampleSize,
@@ -240,8 +312,6 @@ r.result <- .C("R_minCV",
     "targetCV"=targetCV,
     "strataSize"=strataSize,
     "strataSizeStart"=strataSizeStart,
-    "acres"=acres,
-    "acresStart"=acresStart,
     "runTime"=runTime,
     "variables"=x.colnames
   )

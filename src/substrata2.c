@@ -456,33 +456,23 @@ void substrata2_diag(
             size_t N    /* number of elements within a state */
     ) {
 
-  double *** C;
-  size_t H, NhMax, d;
+  size_t H, d;
   size_t * Nh;
   double * T;
   double ** V;
-  double * acres;
-  size_t * size;
   size_t * NhSize;
-  double * NhAcres;
   substrata2_adminStructPtr a; 
 
   /* cast A back to somethine useable */
   a = (substrata2_adminStructPtr) A; 
-  C = a->C;
   H = a->H;
   Nh = a->Nh;
-  NhMax = a->NhMax;
   T = a->T;
   V = a->V;
 
-  acres = a->acres;
-  size = a->size;
   NhSize = a->NhSize;
-  NhAcres = a->NhAcres;
   
   Rprintf("\n************************* i = %d **************************\n",(int) i);
-  Rprintf("\nNhMax: %d\n", (int) NhMax);
 
   
   Rprintf("\nQ\n");
@@ -496,10 +486,6 @@ void substrata2_diag(
   Rprintf("\nNhSize\n");
   for( d =0; d < H; d++) 
     Rprintf("%d:  %d\n",(int) d, (int) NhSize[d]); 
-  
-  Rprintf("\nNhAcres\n");
-  for( d =0; d < H; d++) 
-    Rprintf("%d:  %f\n",(int) d, NhAcres[d]); 
   
   Rprintf("\nT\n");
   for( d =0; d < dN; d++) 

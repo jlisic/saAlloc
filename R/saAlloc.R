@@ -40,7 +40,7 @@ saAlloc <- function(
  
    
 
-  if(method=='saMinCV') { 
+  if(method=='saEqualClus') { 
     x <- saEqualClus(
       y,
       label,

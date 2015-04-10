@@ -1,15 +1,12 @@
 #include "minCV.h"
 
 /************************** MINCV PROBLEM FUNCTIONS ***********************/
-
-/* This is a function to check initialize the structures and variables for
- * the sa proceedure                                                          */
 void minCV_init (
             size_t * I,            /* current state                           */
             double * Q,            /* current cost                            */
             double * D,            /* distance matrix                         */
             void * A,              /* administrative data                     */
-            size_t dN,             /* number of distance matricies            */
+            size_t K,              /* number of variables            */
             size_t N               /* number of elements within a state       */
             ) { 
 
@@ -21,90 +18,449 @@ void minCV_init (
 
   /* cast A back to somethine useable */
   a = (minCV_adminStructPtr) A; 
-  double ** V = a->V;
-  double ** RV = a->RV;
-  double * T = a->T;
-  double * Total = a->Total;
-  size_t H = a->H;
-  size_t * NhSize = a->NhSize;
-  double * sampleSize = a->sampleSize;
-  double * RSampleSize = a->RSampleSize;
 
-
-  /* Q has been allocated but there is nothing in it yet */
-  for(i=0; i < dN; i++) {
-    Q[i] = 0;
-    for(j=0; j < H; j++) {
-      Q[i] += V[i][j] * NhSize[j]* NhSize[j]/( sampleSize[j] );
-
-      /* copy over V to RV */ 
-      RV[i][j] = V[i][j];
-    }
-    Q[i] = sqrt(Q[i]) / Total[i] - T[i];
- 
-  }
-
-  /* copy over the initial sample sizes to a set of 'Reserved' Sample sizes */ 
-  for( j=0; j < H; j++) {
-    RSampleSize[j] = sampleSize[j]; 
-  }
+    Q[0] <- 
+      cv_objectiveFunction( 
+      a->cv,
+      N,
+      a->K,
+      a->H,
+      a->R,
+      a->J,
+      a->domain,
+      a->var,
+      a->Nh,
+      a->nh,
+      a->Total,
+      a->locationAdj_mu,
+      a->scaleAdj_mu,
+      a->T,
+      a->penalty,
+      a->p,
+      a->preserveSatisfied  
+    );
+  
 
   return;
 }
+  
+
+
+/* helper function  */
+double maxExclude( double * x, size_t j, size_t H ) {
+
+  size_t i;
+  double maxx = x[0];
+
+  for( i = 0; i < H; i++) {
+    if( i == j) continue;
+    if( maxx < x[i] ) maxx = x[i];  
+  }
+
+  return( maxx );
+}
+
+
+/* packSubstrata is a function that build all required data sets
+ * and converts the output to the adminSubstrataStructPtr to
+ * a void pointer to pass to sa. 
+ */
+void * minCV_pack( 
+  double * x,               // A link to the Data Set 
+  size_t * I,                 // assignments
+  size_t N,                 // Number of strata 
+  size_t K,                 // Number of strata 
+  size_t H,                 // Number of strata 
+  size_t R,                 // The number of observations of a PSU                    
+  size_t J,                 // The number of targeted characteristics                    
+  double * nh,              // sample size
+  double * T,               // target CV 
+  double * locationAdj,
+  double * scaleAdj,
+  double temp,              // temp denominator for cooling function
+  double * prob,            // vector of sampling weights 
+  double * probMatrix,      // matrix of sampling weights , one weight for each stratum 
+  double * penalty,         // penalty coefficient for objective function 
+  double p,                 // exponent for penalty  
+  size_t iterSampleSize,    // number of iterations to optimize the sample size
+  size_t preserveSatisfied, //    1 - do not go above a prior met constraint, 
+                            //    0 - allow moving above a prior met constraint 
+  int * domain              // domain HxKxJ data structure that will be turned into an MDA
+  ) {
+
+  size_t i,h,k,j,r;
+   
+  // allocate struct 
+  minCV_adminStructPtr packedStruct = malloc( sizeof( minCV_adminStruct ) ); 
+  
+  //  target CV
+  packedStruct->T = T;
+  
+  // H is the number of labels 
+  packedStruct->H = H;
+  
+  // R is the number of observations of each PSU 
+  packedStruct->R = R;
+  
+  // J is the number of domains 
+  packedStruct->J = J;
+  
+  // K is the number of variables 
+  packedStruct->K = K;
+  
+  // p is the exponent for the penalty function 
+  packedStruct->p = p;
+
+  // penalty is the coefficient of the penalty function
+  packedStruct->penalty = penalty;
+  
+  // temperature  
+  packedStruct->temp = temp;
+
+  // population size by strata 
+  packedStruct->Nh = calloc( H, sizeof(size_t));
+  packedStruct->candidate_Nh = calloc( H, sizeof(size_t));
+  for(i=0; i < N; i++) {
+  //  printf("strata size [%d][%d]: %d from %d \n", (int) H, (int) i, (int) packedStruct->Nh[I[i]], (int) I[i]); 
+    packedStruct->Nh[ I[i] ]++; 
+  }
+  for(i=0; i < H; i++) {
+   // printf("strata size [%d]: %d\n", (int) i, (int) packedStruct->Nh[i]); 
+    packedStruct->candidate_Nh[i] = packedStruct->Nh[i];  
+  }
+
+  // created to take care of the convert issue 
+  packedStruct->prob       = prob;       // prob is the selection prob per obs 
+  packedStruct->probMatrix = probMatrix; // probMatrix is the selection prob per obsxstratum 
+
+  //sums fo prob
+  packedStruct->totalStrataProb = calloc( H, sizeof(double));
+  packedStruct->totalProb = 0;
+  for(i=0; i < N; i++) packedStruct->totalStrataProb[ I[i] ] += prob[i];
+  for(i=0; i < H; i++) packedStruct->totalProb += packedStruct->totalStrataProb[i]; 
+
+
+  // sample size
+  packedStruct->nh = nh;
+  packedStruct->candidate_nh = calloc(H, sizeof(double));
+  for(i=0; i<H; i++) {
+    packedStruct->nh[i] = nh[i];
+    packedStruct->candidate_nh[i] = nh[i];
+  }
+    
+  // x - attach the data 
+  packedStruct->x = x;
+  
+  // sample size iteration 
+  packedStruct->iterSampleSize = iterSampleSize;
+
+  // preserve satisfied constraints 
+  // preserveSatisfied;     1 - do not go above a prior met constraint, 
+  //                        0 - allow moving above a prior met constraint 
+  packedStruct->preserveSatisfied = preserveSatisfied;
+  
+  // Domain Conversion 
+  packedStruct->domain = (size_t ***) createMDA( MDA_SIZE_T, 3, H, K, J); 
+  for( h=0; h < H; h++) 
+    for( k=0; k < K; k++) 
+      for( j=0; j < J; j++) 
+        packedStruct->domain[h][k][j] = (size_t) domain[ h*K*J + k*J + j ];
+  
+  // location adjustement
+  if( locationAdj[0] >= 0 ) { 
+    packedStruct->locationAdj_mu = cv_createMeanMatrix(I, N, K, H, R, locationAdj, packedStruct->Nh); 
+    packedStruct->locationAdj = locationAdj;
+
+    packedStruct->candidate_locationAdj_mu = (double ***) createMDA( MDA_DOUBLE, 3, K, H, R); 
+    for( k=0; k < K; k++) 
+      for( h=0; h < H; h++) 
+        for( r=0; r < R; r++) 
+          packedStruct->candidate_locationAdj_mu[k][h][r] = packedStruct->locationAdj_mu[k][h][r];
+  } else {
+    packedStruct->locationAdj_mu = NULL;
+    packedStruct->candidate_locationAdj_mu = NULL;
+    packedStruct->locationAdj = NULL;
+  }
+  
+  // scale adjustment
+  if( scaleAdj[0] >= 0 ) { 
+    packedStruct->scaleAdj_mu = cv_createMeanMatrix(I, N, K, H, R, scaleAdj, packedStruct->Nh); 
+    packedStruct->scaleAdj = scaleAdj; 
+
+    packedStruct->candidate_scaleAdj_mu = (double ***) createMDA( MDA_DOUBLE, 3, K, H, R); 
+    for( k=0; k < K; k++) 
+      for( h=0; h < H; h++) 
+        for( r=0; r < R; r++) 
+          packedStruct->candidate_scaleAdj_mu[k][h][r] = packedStruct->scaleAdj_mu[k][h][r];
+
+  } else {
+    packedStruct->scaleAdj_mu = NULL;
+    packedStruct->candidate_scaleAdj_mu = NULL;
+    packedStruct->scaleAdj = NULL;
+  }
+
+  // Mean
+  packedStruct->mu = cv_createMeanMatrix(I, N, K, H, R, x, packedStruct->Nh); 
+  packedStruct->candidate_mu = (double ***) createMDA( MDA_DOUBLE, 3, K, H, R); 
+  for( k=0; k < K; k++) 
+    for( h=0; h < H; h++) 
+      for( r=0; r < R; r++) 
+        packedStruct->candidate_mu[k][h][r] = packedStruct->mu[k][h][r];
+
+  // Variance
+  packedStruct->var = cv_createVarMatrix(I, N, K, H, R, x, 
+    packedStruct->mu, packedStruct->Nh); 
+  packedStruct->candidate_var = (double ***) createMDA( MDA_DOUBLE, 3, K, H, R); 
+  for( k=0; k < K; k++) 
+    for( h=0; h < H; h++) 
+      for( r=0; r < R; r++) 
+        packedStruct->candidate_var[k][h][r] = packedStruct->var[k][h][r];
+
+  // Total 
+  packedStruct->Total =  cv_createTotalMatrix( N, K, H, R, J, packedStruct->domain, packedStruct->mu, packedStruct->Nh);
+
+  // CV
+  packedStruct->cv = cv_calcCV( NULL, N, K, H, R, J, 
+    packedStruct->domain, 
+    packedStruct->var, 
+    packedStruct->Nh, 
+    packedStruct->nh, 
+    packedStruct->Total, 
+    packedStruct->locationAdj_mu, 
+    packedStruct->scaleAdj_mu 
+  ); 
+  packedStruct->candidate_cv = calloc(J, sizeof( double ) );
+  for(j = 0; j < J; j++) packedStruct->candidate_cv[j] = packedStruct->cv[j];
+
+  return( (void *) packedStruct );
+}
+
+
+
+
+/* clean up for the substrata administrative data */
+void minCV_delete( minCV_adminStructPtr A, size_t K, size_t N ) {
+
+  // allocate struct 
+  minCV_adminStructPtr packedStruct =  (minCV_adminStructPtr) A;
+  
+  // H is the number of labels 
+  size_t H = packedStruct->H;
+  
+  // R is the number of observations of each PSU 
+  size_t R = packedStruct->R;
+  
+  // J is the number of domains 
+  size_t J = packedStruct->J;
+ 
+ // K handled 
+//  printf("delete\n"); 
+ 
+//  printf("Nh\n"); 
+  deleteMDA( (void *) packedStruct->Nh, 1) ;
+//  printf("can_Nh\n"); 
+  deleteMDA( (void *) packedStruct->candidate_Nh, 1) ;
+//  printf("can_nh\n"); 
+  deleteMDA( (void *) packedStruct->candidate_nh, 1) ;
+  
+//  printf("domain\n"); 
+  deleteMDA( (void *) packedStruct->domain, 3, H, K) ;
+ 
+  if( packedStruct->locationAdj_mu != NULL ) { 
+//    printf("locationAdj\n"); 
+    deleteMDA( (void *) packedStruct->locationAdj_mu, 3, K, H) ;
+    deleteMDA( (void *) packedStruct->candidate_locationAdj_mu, 3, K, H) ;
+  }
+  if( packedStruct->scaleAdj_mu != NULL ) { 
+//    printf("scaleAdj\n"); 
+    deleteMDA( (void *) packedStruct->scaleAdj_mu, 3, K, H) ;
+    deleteMDA( (void *) packedStruct->candidate_scaleAdj_mu, 3, K, H) ;
+  }
+
+//  printf("mu\n"); 
+  deleteMDA( (void *) packedStruct->mu, 3, K, H) ;
+//  printf("candidate mu\n"); 
+  deleteMDA( (void *) packedStruct->candidate_mu, 3, K, H) ;
+
+//  printf("var\n"); 
+  deleteMDA( (void *) packedStruct->var, 3, K, H) ;
+//  printf("candidate var\n"); 
+  deleteMDA( (void *) packedStruct->candidate_var, 3, K, H) ;
+
+//  printf("Total\n"); 
+  deleteMDA( (void *) packedStruct->Total, 2, J) ;
+
+//  printf("cv\n"); 
+  deleteMDA( (void *) packedStruct->cv, 1) ;
+  
+//  printf("candidate cv\n"); 
+  deleteMDA( (void *) packedStruct->candidate_cv, 1) ;
+
+//  printf("total strata probability\n"); 
+  deleteMDA( (void *) packedStruct->totalStrataProb, 1) ;
+
+  // finally free the struct
+  free( packedStruct);
+  packedStruct = NULL;
+
+}
+
+
+
+/* function to check status */
+void minCV_diag( 
+            size_t i,   /* new Index */
+            size_t * I, /* current state */
+            double * Q, /* current cost */
+            void * A,   /* administrative data */
+            size_t K,  /* number of distance matricies */
+            size_t N    /* number of elements within a state */
+    ) {
+
+  size_t h = 0;
+ 
+  // allocate struct 
+  minCV_adminStructPtr packedStruct =  (minCV_adminStructPtr) A;
+
+
+  if( N < 30 ) {
+  Rprintf("I:\n");
+  for(h = 0; h < N; h++) Rprintf("[%d] %d\n", (int) h, (int) I[h] ); 
+  }
 
 
   
+  // H is the number of labels 
+  size_t H = packedStruct->H;
+  
+  // R is the number of observations of each PSU 
+  size_t R = packedStruct->R;
+  
+  // J is the number of domains 
+  size_t J = packedStruct->J;
+ 
+  // K handled 
+  Rprintf("H = %d, K = %d, J = %d, R = %d, N = %d\n", (int) H, (int) K, (int) J, (int) R, (int) N);
+  Rprintf("iterSampleSize = %d\n", packedStruct->iterSampleSize); 
+  Rprintf("preserveSatisfied = %d\n", packedStruct->preserveSatisfied); 
+  Rprintf("p = %f, temp = %f\n", (float) packedStruct->p, (float) packedStruct->temp);
+
+  // created to take care of the convert issue 
+  //packedStruct->prob       = prob;       // prob is the selection prob per obs 
+  //packedStruct->probMatrix = probMatrix; // probMatrix is the selection prob per obsxstratum 
+  
+  Rprintf("Q\n");
+  printMDA( (void *) Q, MDA_DOUBLE, 1, 1); 
+  
+  Rprintf("T\n"); //targetCV
+  printMDA( (void *) packedStruct->T, MDA_DOUBLE, 1, J); 
+  
+  Rprintf("Total Strata Probability\n"); //targetCV
+  printMDA( (void *) packedStruct->totalStrataProb, MDA_DOUBLE, 1, H); 
+  Rprintf("Total Probability = %4.2f\n", packedStruct->totalProb); //targetCV
+  
+  Rprintf("cv\n");
+  printMDA( (void *) packedStruct->cv, MDA_DOUBLE, 1, J); 
+  Rprintf("candidate cv\n");
+  printMDA( (void *) packedStruct->candidate_cv, MDA_DOUBLE, 1, J); 
+
+  Rprintf("Nh\n");
+  printMDA( (void *) packedStruct->Nh, MDA_SIZE_T, 1, H); 
+
+  Rprintf("candidate Nh\n");
+  printMDA( (void *) packedStruct->candidate_Nh, MDA_SIZE_T, 1, H); 
+  
+  Rprintf("nh\n");
+  printMDA( (void *) packedStruct->nh, MDA_DOUBLE, 1, H); 
+  Rprintf("candidate nh\n");
+  printMDA( (void *) packedStruct->candidate_nh, MDA_DOUBLE, 1, H); 
+
+  Rprintf("domain\n");
+  printMDA( (void *) packedStruct->domain, MDA_SIZE_T, 3, H, K, J); 
+ 
+  Rprintf("penalty\n");
+  printMDA( (void *) packedStruct->penalty, MDA_DOUBLE, 1, J); 
+
+
+  // location adjustement
+  if( packedStruct->locationAdj != NULL ) { 
+    Rprintf("Location Adjustment\n");
+    printMDA( (void *) packedStruct->locationAdj_mu, MDA_DOUBLE, 3, K, H, R); 
+  } else {
+    Rprintf("No Location Adjustment\n");
+  }
+  
+  // scale adjustment
+  if( packedStruct->scaleAdj != NULL ) { 
+    Rprintf("Scale Adjustment\n");
+    printMDA( (void *) packedStruct->scaleAdj_mu, MDA_DOUBLE, 3, K, H, R ); 
+  } else {
+    Rprintf("No Scale Adjustment\n");
+  }
+
+  // Mean
+  Rprintf("Mean\n");
+  printMDA( (void *) packedStruct->mu, MDA_DOUBLE, 3, K, H, R); 
+  Rprintf("Candidate Mean\n");
+  printMDA( (void *) packedStruct->candidate_mu, MDA_DOUBLE, 3, K, H, R); 
+
+  // Variance
+  Rprintf("Variance\n");
+  printMDA( (void *) packedStruct->var, MDA_DOUBLE, 3, K, H, R); 
+  Rprintf("Candidate Variance\n");
+  printMDA( (void *) packedStruct->candidate_var, MDA_DOUBLE, 3, K, H, R); 
+
+  // Total 
+  Rprintf("Total\n");
+  printMDA( (void *) packedStruct->Total, MDA_DOUBLE, 2, J,  R); 
+
+  return;
+}
+  
+
 
 /* get a new random state */
 size_t minCV_randomState (
             size_t * I,            /* current state                           */
             double * Q,            /* current cost                            */
-            size_t * J,            /* new state                               */
-            double * R,            /* new cost                                */
+            size_t * IFin,         /* new state                               */
+            double * QFin,         /* new cost                                */
             double * D,            /* distance matrix                         */
             void * A,              /* administrative data                     */
-            size_t dN,             /* number of distance matricies            */
+            size_t K,             /* number of distance matricies            */
             size_t N               /* number of elements within a state       */
     ) { 
 
   minCV_adminStructPtr a;
 
-
   /* cast A back to somethine useable */
   a = (minCV_adminStructPtr) A; 
-  double * prob = a->prob;
-  double * probMatrix = a->probMatrix;
-  double * sampleSize = a->sampleSize;
-  size_t * NhSize = a->NhSize;
-  double totalProbability = a->totalProbability;
+  double * nh = a->nh;
+  size_t * Nh = a->Nh;
   size_t i =N+1;
   size_t H = a->H;
   size_t trys = 0;  /* number of times to try */
-  size_t d;
 
-  /* first check if there is anything to do */
-  for( d = 0; d < dN; d++) {
-    if( Q[d] > 0 ) break;
-  }
+  size_t h ;
 
-  /* if d = dN then all constraints are satisfied */
-  if( d == dN) {
-    Rprintf("All constraints satisfied, returning early\n");
-    return(N+1);
-  }
-
+//  for(h=0;h<N;h++) printf("%4.2f ", a->prob[h] );
+//  printf("\n");
 
   while( i >= N ) {
 
     /* generate possible move */
-    i = minCV_getIndex( prob, totalProbability );
+    i = minCV_getIndex( 
+        a->prob, 
+        a->totalProb, 
+        a->totalStrataProb
+      );
  
     /* check if there are units that I can move */ 
-    if( sampleSize[ I[i] ] < NhSize[ I[i] ] ) {
+    if( Nh[ I[i] ] > 2 ) {
       
-      a->Hj = minCV_getMoveStrata( i, I, prob, probMatrix, N, H);
+      a->Hj = minCV_getMoveStrata( i, I, a->prob, a->probMatrix, N, H);
   
-      if( a->Hj == N+1 ) i = N+1; /* i = N+1 is used to signal to sa that no move can be made */
+      if( a->Hj == N+1 ) i = N+1;
   
   
     } else {
@@ -112,18 +468,63 @@ size_t minCV_randomState (
     }
 
     /* fail on lack of matches */
-    if( trys >= 1000 ) {
-      Rprintf(" 1000 failures on finding a possible move, giving up\n"); 
+    if( trys >= 10000 ) {
+      Rprintf(" 10,000 failures on finding a possible move, giving up\n"); 
       break;
     }
 
     trys++;
   }
-  
+
+  // record Hi
+  a->Hi = I[i];
+
+//  printf("Moving %d [%d] to [%d]\n", (int) i, (int) a->Hi, (int) a->Hj);
 
   /* return index */
   return(i);
 }
+
+
+
+/* function to select an index */
+size_t minCV_getIndex( double * prob, double totalProbability, double * totalStrataProbability ) {
+
+  size_t index = 0;
+//  size_t strataIndex = 0;
+  double total = 0;
+
+//  size_t h = 0;
+
+  /* select a value uniform across the sum of probabilities */
+  double searchProbability = runif(0,totalProbability); 
+  
+//  printf("totalTest = %4.2f\n", totalStrataProbability[0]); 
+
+//  printf("searchProbability = %4.2f, totalProbability = %4.2f\n",
+//    searchProbability, totalProbability);
+//  for( h = 0; h < 3; h++)  printf("%d: %4.2f\n", (int) h, totalStrataProbability[h]); 
+
+   
+  /* find the selected strata */ 
+//  total = totalStrataProbability[0]; 
+//  while( total < searchProbability ) {
+//    strataIndex++;
+//    total += totalStrataProbability[strataIndex];
+//  }
+    
+  /* adjust search probability */ 
+  //searchProbability = searchProbability - total + totalStrataProbability[strataIndex];
+
+  total = prob[0]; 
+  while( total < searchProbability ){ 
+      index++;
+      total += prob[index];
+  }
+
+  return( index );
+}
+
 
 
 /* get a strata for i to move to */
@@ -141,10 +542,11 @@ size_t minCV_getMoveStrata(
   double total;
   size_t Hj;
 
-  /* get the total weight of all the strata except Hi */
-  for( Hj=0; Hj < H; Hj++) 
-    if( Hj != Hi ) totalProb += probMatrix[i*H + Hj];
-
+  /* get the total weight of all the strata */
+  for( Hj=0; Hj < H; Hj++) { 
+    //if( Hj != Hi ) totalProb += probMatrix[i*H + Hj];
+    totalProb += probMatrix[i*H + Hj];
+  }
   /* if the total probability remaininig is 0 quit */
   if( totalProb == 0 ) return( N + 1 );   
 
@@ -156,161 +558,13 @@ size_t minCV_getMoveStrata(
   for( Hj=0; Hj < H; Hj++) {
     
     /* if the strata is in a different from i's strata then add total */ 
-    if( Hj != Hi ) total += probMatrix[i*H + Hj];
+    //if( Hj != Hi ) 
+    total += probMatrix[i*H + Hj];
 
-    if( total >= totalProb) break;  
+    if( total > totalProb) break; /* unless all the probability is 0 then units are sampled on an 'open' interval */ 
   }
   
   return( Hj ) ;
-}
-
-
-
-/* function to select an index */
-size_t minCV_getIndex( double * prob, double totalProbability ) {
-
-  size_t index = 0;
-  double total = 0;
-  double searchProbability = runif(0,totalProbability); /* select a value uniform across the sum of probabilities */
-      
-  total = prob[0]; 
-  while( total < searchProbability ){ 
-      index++;
-      total += prob[index];
-  }
-
-  return( index );
-}
-
-
-/* This is a function to update the sample size                              */
-void minCV_sampleSizeChange (
-            void * A,              /* administrative data                     */
-            double * R,
-            size_t dN,             /* number of distance matricies            */
-            size_t N,              /* number of elements within a state       */
-            size_t iter
-    ) { 
-
-  minCV_adminStructPtr a;
-
-  /* cast A back to something useable */
-  a = (minCV_adminStructPtr) A; 
-  
-  size_t H = a->H;
-  double * T = a->T;
-  size_t * NhSize = a->NhSize;
-  double ** RV = a->RV;
-  double * Total = a->Total;
-  double * sampleSize = a->sampleSize; /* sample Size */
-  double * RSampleSize = a->RSampleSize; /* sample Size for R */
-  size_t * RNhSize = a->RNhSize;
-  size_t h;
-  size_t i;
-  size_t d;
-  size_t Hi; 
-  size_t Hj;
-  size_t optHj;
-  double maxRLocal;
-
-  /* if there is nothing to do, do nothing */
-  if( iter == 0) return; 
-
-  double * sampleVar = malloc( sizeof(double) * H * dN);
-  double * RLocal =    malloc( sizeof(double) * dN);
-  double * RGlobal =   malloc( sizeof(double) * dN);
-
-  double minSampleSize = 2;
-    
-  /* the goal here is fairly simple 
-     * 0.0  we want to get the initial objective function, this is the typical max difference for CV's that violate the CV constraint
-     * 1.0  now we randomly select a strata
-     * 2.0  now we want to see which strata we can a 'draw' to.
-   */
-    
-  /********* 0.0 pre calculate *************/
-
-  /* 0.1 pre-calculate the sample variance */ 
-  for( d = 0; d < dN; d++) 
-    for( h = 0; h < H; h++) 
-      sampleVar[H * d + h] = RNhSize[h] * RNhSize[h] * RV[d][h];   
-
-  /* 0.2 copy R to RGlobal */
-  for( d = 0; d < dN; d++) RGlobal[d] = R[d];
-
-  /* iterate a fixed number of times */
-  for( i = 0 ; i < iter; i++ ) {
-      
-    /* 1.0 randomly select a strata */
-    Hi = SA_GETINDEX(H);
-    optHj = H;
- 
-
-    /* only proceed if stratum Hi can be made smaller */ 
-    if( RSampleSize[Hi] < minSampleSize + 1 ) {
-      continue; 
-    }
-
-    /* 2.0 calculate objective function change for moving to each strata */ 
-    for( Hj = 0; Hj < H; Hj++ ) {
-      maxRLocal = 0;
- 
-      /* if the exchange would make the sample size too big, we don't do it */ 
-      if( RSampleSize[Hj] + 1 > NhSize[Hj] ) continue;
-
-      /* do not run over the selected state */
-      if( Hj != Hi) {
-        for( d = 0; d < dN; d++) { 
-          RLocal[d] = 0;
-      
-          for( h = 0; h < H; h++) {
-            if( h == Hj ) { 
-              RLocal[d] += sampleVar[H*d+h] / (RSampleSize[h] + 1); 
-            } else if( h == Hi ) {
-              RLocal[d] += sampleVar[H*d+h] / (RSampleSize[h] - 1);
-            } else { 
-              RLocal[d] += sampleVar[H*d+h] / RSampleSize[h];
-            }
-          }
-
-          RLocal[d] = sqrt(RLocal[d])/Total[d] - T[d];
-  
-          /* check if we are doing better than RGlobal[d] for every d that does not satisfy the CV constraint */ 
-          if( RLocal[d] > 0 ) { 
-           
-            if( RLocal[d] > RGlobal[d] ) {
-              maxRLocal = INFINITY; 
-              break;
-            } 
-          }
-        }
-        /* finished iterating over all commodities */
-
-
-        /* check if we are doing better */ 
-        if( maxRLocal < INFINITY ) {
-          optHj = Hj;
-          for( d = 0; d < dN; d++) RGlobal[d] = RLocal[d];
-        } 
-
-      }
-      
-    }
-    
-    /* 3.0 if there are reductions in objective function make a move to minimize CV */
-  
-    if( optHj < H ) {  /* check if the final result minimized the objective function for all H */
-      for( d = 0; d < dN; d++) R[d] = RGlobal[d]; /* assign RGlobal[d] to R[d] */
-      RSampleSize[optHj] += 1.0;
-      RSampleSize[Hi] -= 1.0;
-    }
-
-  }
-
-  free(RLocal);
-  free(RGlobal);
-  free(sampleVar);
-  return;
 }
 
 
@@ -320,96 +574,106 @@ double minCV_costChange (
             size_t i,              /* new Index                               */
             size_t * I,            /* current state                           */
             double * Q,            /* current cost                            */
-            size_t * J,            /* new state                               */
-            double * R,            /* new cost                                */
-            double * D,            /* distance matrix                         */
+            size_t * IFin,         /* new state                               */
+            double * QFin,         /* new cost                                */
+            double * D,            /* distance matrix     (NOT USED)          */
             void * A,              /* administrative data                     */
-            size_t dN,             /* number of distance matricies            */
-            size_t N               /* number of elements within a state       */
+            size_t K,              /* number of variables                     */
+            size_t N               /* number of PSUs                          */
     ) { 
 
   /* cast A back to something useable */
   minCV_adminStructPtr a = (minCV_adminStructPtr) A; 
-  
-  double *** C = a->C;
-  size_t H = a->H;
-  double * T = a->T;
-  size_t * size = a->size;
-  size_t * NhSize = a->NhSize;
-  size_t * RNhSize = a->RNhSize;
-  double ** V = a->V;
-  double ** RV = a->RV;
-  double * Total = a->Total;
-  size_t Hj = a->Hj;               /* get our chosen strata */
-  double * sampleSize = a->sampleSize;
-  double * RSampleSize = a->RSampleSize;
-  double delta = 0;
-  size_t h;
-  double fixedVar;
-  size_t  Hi, d; 
-  size_t preserveSatisfied = a->preserveSatisfied;
-
-  /* figure out change in cost */
-  Hi = I[i]; 
-    
-  /* before we continue on we need to ensure that RNhSize and RSample Size reflect the current State */ 
-  for( h = 0; h < H; h++) {
-    RNhSize[h] = NhSize[h]; 
-    RSampleSize[h] = sampleSize[h]; 
-  }
-    
-  /* proposed new population size for Hj */
-  RNhSize[Hj] = NhSize[Hj] + size[i]; 
-
-  /* proposed new population size for Hi */
-  RNhSize[Hi] = NhSize[Hi] - size[i]; 
-       
-
-  /* update the CV differences */ 
-  for(d = 0; d < dN; d++) {
-    /* get the variance total for the otehr strata */
-    fixedVar = 0;
-
-    for( h = 0; h < H; h++) {
-     if( (h != Hi) & (h != Hj) ) {
-       RV[d][h] = V[d][h]; /* copy over any prior changes */
-       fixedVar += NhSize[h] * NhSize[h] * RV[d][h] / sampleSize[h];   
-     } 
-    }
-
-    /* update RV */
-    RV[d][Hj] =  (V[d][Hj] * NhSize[Hj] * (NhSize[Hj] - 1) + C[d][i][Hj] ) / (double) ( (RNhSize[Hj] - 1) * RNhSize[Hj] );
-    RV[d][Hi] =  (V[d][Hi] * NhSize[Hi] * (NhSize[Hi] - 1) - C[d][i][Hi] ) / (double) ( (RNhSize[Hi] - 1) * RNhSize[Hi] );
  
+  size_t J = a->J;  // number of domains
+  size_t H = a->H;  // number of strata
+  size_t R = a->R;  // number of repeat observations for each PSU
 
-    /* get the distance between */
-    R[d] =
-      sqrt( fixedVar + 
-       (RNhSize[Hj] * RNhSize[Hj]) / sampleSize[Hj] * RV[d][Hj]  + 
-       (RNhSize[Hi] * RNhSize[Hi]) / sampleSize[Hi] * RV[d][Hi] 
-      ) / Total[d] - T[d];
-  } 
+  double delta = INFINITY; 
+  double obj, candidate_obj;
+
+
+  // apply the variance change 
+  // note that we only update the cv if there is a change in strata 
+  if( a->Hi != a->Hj ) 
+  cv_updateMatrix2( I, N, K, H, R, 
+      a->x, 
+      a->locationAdj,
+      a->scaleAdj,
+      a->candidate_mu, 
+      a->candidate_locationAdj_mu,
+      a->candidate_scaleAdj_mu,
+      a->candidate_var, 
+      a->Nh, 
+      i, 
+      a->Hj ); 
+
+  // update Nh
+  a->candidate_Nh[I[i]]--;
+  a->candidate_Nh[a->Hj]++;
+
+  // calculate the CV 
+  cv_calcCV( 
+      a->candidate_cv, 
+      N, K, H, R, J, 
+      a->domain, 
+      a->candidate_var, 
+      a->candidate_Nh, 
+      a->candidate_nh, 
+      a->Total, 
+      a->candidate_locationAdj_mu, 
+      a->candidate_scaleAdj_mu
+    ); 
+
+  // get change in allocation 
+  alloc_sampleSizeChange(
+      a->candidate_cv, 
+      N, K, H, R, J, 
+      a->domain, 
+      a->candidate_var, 
+      a->candidate_Nh, 
+      a->candidate_nh, 
+      a->Total, 
+      a->candidate_locationAdj_mu, 
+      a->candidate_scaleAdj_mu, 
+      a->T, 
+      a->penalty, 
+      a->p, 
+      a->preserveSatisfied, 
+      a->iterSampleSize, 
+      NULL
+    );
+
+
+  delta =  cv_objectiveFunctionCompare( 
+    a->candidate_cv,         //if cv = NULL create it, otherwise handle in place 
+    a->cv,   
+    &obj,
+    &candidate_obj,
+    N, K, H, R, J, 
+    NULL,     // only used if evaluateOnly != 1
+    NULL,        // only used if evaluateOnly != 1 
+    NULL,
+    NULL,
+    NULL,       // only used if evaluateOnly != 1
+    NULL, // only used if evaluateOnly != 1
+    NULL, // only used if evaluateOnly != 1
+    a->T,
+    a->penalty,
+    a->p,
+    1, // option to not construct CV, under this condition CV cannot be null 
+    a->preserveSatisfied
+  );
+    
+//  printf("obj: %f objPrior %f\n", obj, candidate_obj); 
   
-  /* update the allocation */ 
-  minCV_sampleSizeChange ( A, R, dN, N, a->sampleIter);
-
-  /* get the max change in CV */
-  for( d = 0; d < dN; d++) {
-    if( R[d] > 0 ) {
-
-      /* if preserveSatisfied == 1 then any change that would violate a met 
-       * constraint will be avoided
-       */
-      if( ( Q[d] <= 0 ) & (preserveSatisfied == 1) ) return( INFINITY );
-
-      if( R[d] - Q[d] > delta ) {
-        delta =R[d] - Q[d];
-      }
-    } 
-  }
-
   return(delta);
 }
+
+
+
+
+
 
 
 /* update from change in i function */
@@ -428,131 +692,152 @@ void minCV_update (
             size_t i,   /* new Index */
             size_t * I, /* current state */
             double * Q, /* current cost */
-            size_t * J, /* new state, destructive */
-            double * R, /* new cost, destructive */
+            size_t * IFin, /* new state, destructive */
+            double * QFin, /* new cost, destructive */
             double * D, /* distance matrix */
             void * A,   /* administrative data */
-            size_t dN,  /* number of distance matricies */
+            size_t K,  /* number of distance matricies */
             size_t N,   /* number of elements within a state */
             double * costChange /* cost Change */
             ) { 
+
+  size_t k, j, r,h;  
+  minCV_adminStructPtr a = (minCV_adminStructPtr) A; 
+  size_t R = a->R;
+  size_t H = a->H;
+  size_t J = a->J;
+  size_t Hi = a->Hi;
+  size_t Hj = a->Hj; 
+
+  /* restore prior state candidates */
+  if( accept == 0) {
+//    printf("accept == 0\n");
   
 
-  /* nothing to do, return */
-  if( accept == 0) return;
- 
+    /* change back mu, var and adjustments */
+    for( k = 0; k < K; k++) {
+      for( r = 0; r < R; r++) {
+        a->candidate_var[k][Hj][r] = a->var[k][Hj][r];
+        a->candidate_mu[k][Hj][r] = a->mu[k][Hj][r];
+        
+        a->candidate_var[k][Hi][r] = a->var[k][Hi][r];
+        a->candidate_mu[k][Hi][r] = a->mu[k][Hi][r];
+      } 
+      if( a->scaleAdj != NULL) { 
+        for( r = 0; r < R; r++) {
+          a->candidate_scaleAdj_mu[k][Hj][r] = a->scaleAdj_mu[k][Hj][r];
+          a->candidate_scaleAdj_mu[k][Hi][r] = a->scaleAdj_mu[k][Hi][r];
+        }
+      }
+      if( a->locationAdj != NULL) { 
+        for( r = 0; r < R; r++) {
+          a->candidate_locationAdj_mu[k][Hj][r] = a->locationAdj_mu[k][Hj][r];
+          a->candidate_locationAdj_mu[k][Hi][r] = a->locationAdj_mu[k][Hi][r];
+        }
+      }
+    } 
 
-  /* open the data structure and convert it to something useful */
-  minCV_adminStructPtr a = (minCV_adminStructPtr) A; 
-  size_t   d;
-  double * sampleSize    = a->sampleSize;      /* sample size */
-  size_t   H             = a->H;               /* number of strata */
-  double * T             = a->T;               /* cv targets */
+    return;
+  }
+
 
   /* record objective function and sample sizes for diagnostics */
   if ( accept == 2) { 
+//    printf("accept == 2\n");
+
     /* record what strata the selected PSU is moving to */
-    costChange[4] = a->Hj;
+    costChange[4] = Hi;
+    costChange[5] = Hj;
 
     /* add on sample size */
-    for( d = 0; d < H; d++) costChange[5+d] = sampleSize[d]; 
-    
+    for( h = 0; h < H; h++) costChange[6+h] = a->candidate_nh[h]; 
     /* add on current obj function */
-    for( d = 0; d < dN; d++) costChange[5 + H +d] = Q[d] + T[d]; 
+    for( j = 0; j < J; j++) {
+      costChange[6 + H +j] = a->candidate_cv[j]; 
+    }
+      
+    /* change back nh */
+    a->candidate_nh[Hj] = a->nh[Hj]; 
+    a->candidate_nh[Hi] = a->nh[Hi]; 
+
+    /* change back Nh */
+    a->candidate_Nh[Hj] = a->Nh[Hj]; 
+    a->candidate_Nh[Hi] = a->Nh[Hi]; 
+  
+
+//    for( j = 0; j < H + J + 6; j++) printf("%4.2f ", costChange[j]);
+//    printf("\n");
 
     return;
   }
   
   /* optimize sample size */
   if ( accept == 3) { 
+//    printf("accept == 3\n");
     //minCV_sampleSizeChange ( A, Q, R, dN, N, a->sampleIter);
     return;
   }
-  
+    
+//  printf("accept == 1\n");
 
-  size_t l, Hi; 
-  double dil ; 
-
-  double *** C = a->C;
-  double **  V = a->V;
-  double **  RV = a->RV;
-  //size_t *   Nh = a->Nh;
-  double *   NhAcres = a->NhAcres;
-  size_t *   Nh = a->Nh;
-  size_t *   NhSize = a->NhSize;
-  size_t *   RNhSize = a->RNhSize;
-  size_t *   size = a->size;
-  double *   acres = a->acres;
-  size_t     Hj = a->Hj;
-  size_t **  L = a->L;
-  size_t     k = a->k;
-  double *   x = a->x;
-  double * prob = a->prob;
-  double * probMatrix = a->probMatrix;
-  double totalProbability = a->totalProbability;
-  double * RSampleSize = a->RSampleSize;
-
-  /* figure out change in cost */
-  Hi = I[i];
+  // check if there is no change 
+  if( a->Hi == a->Hj)  
+    for(h=0; h < H; h++) if( a->nh[h] != a->candidate_nh[h] ) break;
+  if( h == H) return; 
   
   /* update the strata assignment */
   I[i] = Hj;
 
-  /* update prob */
-  totalProbability = totalProbability - prob[i];
-  prob[i] = 1 - probMatrix[ H * i + I[i] ];
-
-  /* update total prob */
-  a->totalProbability = totalProbability + prob[i];
+  /* adjust strata probabilities */
+  // remove old prob
+  a->totalStrataProb[Hi] -= a->prob[i];
+  a->totalProb -= a->prob[i];
   
-  /* update L */
-  /* need to rewrite this TODO, check terminal condition and dependencies on L*/
-  l=0;
-  while( L[Hi][l] != i ) l++;
-  L[Hi][l] = N;
+  // get new prob based on new stratum
+  a->prob[i] = maxExclude( &( a->probMatrix[H * i] ), Hj, H );
 
-  l = 0;
-  while( L[Hj][l] < N ) l++;
-  L[Hj][l] = i;
- 
-  /* if it is an end point, push back the end point */ 
-  if( L[Hj][l] == N+1 ) L[Hj][l+1] = N+1;  
+  /* add on new prob */
+  a->totalStrataProb[Hj] += a->prob[i];
+  a->totalProb += a->prob[i];
 
-  /* update sample size */
-  for( d = 0; d < H; d++) sampleSize[d] = RSampleSize[d];
+  /* change back nh */
+  a->nh[Hj] = a->candidate_nh[Hj]; 
+  a->nh[Hi] = a->candidate_nh[Hi]; 
 
-  /* update Q */ 
-  for( d=0; d < dN; d++) Q[d] = R[d];
 
-  if(Hi == Hj) return; 
+  /* change back Nh */
+  a->Nh[Hj] = a->candidate_Nh[Hj]; 
+  a->Nh[Hi] = a->candidate_Nh[Hi]; 
 
-  /* update R, C  and V */
-  for( d=0; d < dN; d++) {
+  /* change back mu, var and adjustments */
+  for( k = 0; k < K; k++) {
+    /* change back cv */
+    a->cv[k] = a->candidate_cv[k]; 
+
+    for( r = 0; r < R; r++) {
+      a->var[k][Hj][r] = a->candidate_var[k][Hj][r];
+      a->mu[k][Hj][r] = a->candidate_mu[k][Hj][r];
       
-    /* update the variance, this must be done before C gets updated */
-    V[d][Hj] = RV[d][Hj]; 
-    V[d][Hi] = RV[d][Hi]; 
-
-   for( l = 0; l < N; l++) {
-     dil = getDistX(i,l,x,k,d,N,squaredEuclidianMeanDist); 
-    
-     /* Hj is i's new index */
-     C[d][l][Hj] =  C[d][l][Hj] + dil; 
-     C[d][l][Hi] =  C[d][l][Hi] - dil;  
+      a->var[k][Hi][r] = a->candidate_var[k][Hi][r];
+      a->mu[k][Hi][r] = a->candidate_mu[k][Hi][r];
+    } 
+    if( a->scaleAdj != NULL) { 
+      for( r = 0; r < R; r++) {
+        a->scaleAdj_mu[k][Hj][r] = a->candidate_scaleAdj_mu[k][Hj][r];
+        a->scaleAdj_mu[k][Hi][r] = a->candidate_scaleAdj_mu[k][Hi][r];
+      }
     }
-  }
-
-  Nh[Hi]--;
-  Nh[Hj]++;
-
-  NhSize[Hi] = RNhSize[Hi];
-  NhSize[Hj] = RNhSize[Hj];
-
-  NhAcres[Hi] -= acres[i];
-  NhAcres[Hj] += acres[i];
+    if( a->locationAdj != NULL) { 
+      for( r = 0; r < R; r++) {
+        a->locationAdj_mu[k][Hj][r] = a->candidate_locationAdj_mu[k][Hj][r];
+        a->locationAdj_mu[k][Hi][r] = a->candidate_locationAdj_mu[k][Hi][r];
+      }
+    }
+  } 
   
   return;
 }
+
 
 
 /* cooling schedule                                                           */
@@ -567,7 +852,7 @@ double minCV_cool (
             size_t dN,   /* number of distance matricies */
             size_t N    /* number of elements within a state */
             )  { 
-double temp;
+  double temp;
   minCV_adminStructPtr a;
   
   a = (minCV_adminStructPtr) A;
@@ -576,468 +861,5 @@ double temp;
   /*return( exp( (log(1+iter)) * diff /  (-1* temp) ) ); */ 
   return( exp( (1+iter) * diff /  (-1* temp) ) ) ; 
 }  
-
-
-/* packSubstrata is a function that build all required data sets
- * and converts the output to the adminSubstrataStructPtr to
- * a void pointer to pass to sa. 
- */
-void * minCV_packSubstrata( 
-    size_t * I,     /* initial assignment                            */
-    double * D,     /* distance matrix                               */
-    double * x,     /* the data set */
-    int * aInt,     /* integer admin data from file                  */
-    double * aDbl,  /* double admin data from file                   */
-    size_t dN,      /* number of distance matricies                  */
-    size_t N,       /* number of elements within a state             */
-    size_t k,       /* the size of an element of x                   */
-    size_t NInt,    /* the number of items in the admin integer data */
-    size_t NDbl     /* the number of items in the admin double data */
-) {
-
-  size_t i;
-   
-  /* allocate struct */
-  minCV_adminStructPtr packedStruct = malloc( sizeof( minCV_adminStruct ) ); 
-  
-  /* H is the number of labels */
-  size_t H =  minCV_labelCount( I, N );
-
-  /* created to take care of the convert issue */ 
-  size_t * size       = malloc(sizeof(size_t) * N );
-  double * acres      = malloc(sizeof(double) * N );
-  double * prob       = malloc(sizeof(double) * N );
-  double * probMatrix = malloc(sizeof(double) * N * H );
-
-  for( i=0; i < N; i++) {
-    size[i]  =  (size_t) aInt[i];
-    acres[i] =           aDbl[i];
-  } 
-
-  /* get the number of iterations to optimize sample size */
-  packedStruct->sampleIter = (size_t) aInt[N];
-  
-  /* get the handling of changes that violate a met constraint */ 
-  packedStruct->preserveSatisfied = (size_t) aInt[N + 1];
-
-  /* Nh is the size of each label (vector) */
-  size_t * Nh = minCV_labelTotalPSUs( I, N, H);
-  
-  /* NhSize is the total number of segments (vector) */
-  size_t * NhSize = minCV_labelTotalSegments( I, N, H, size);
-  size_t * RNhSize = malloc( sizeof(size_t) * H);
-
-  /* NhSize is the total number of segments (vector) */
-  double * NhAcres = minCV_labelTotalAcres( I, N, H, acres);
-  
-  /* NhMax is the largest label from Nh*/
-  //NhMax = 2 * minCV_arrayMaxSize_t( Nh, H );
-  size_t NhMax = N;
-
-  /* creates a matrix of indexes with rows substrata, and colunns indexes */ 
-  size_t ** L = minCV_labelCreateMaster( I, N, H, NhMax); 
-
-  /* creates a matrix of differences between item i, and all the points in a 
-   * stratum h.  Rows are items, and columns are strata.
-   */
-
-  /* get target variance values */
-  double * T = malloc( sizeof( double ) * dN );
-  for( i =0; i < dN; i++) 
-    T[i] = aDbl[N + i]; 
- 
-  /* within variation */ 
-  double * W = malloc( sizeof( double ) * dN );
-  for( i =0; i < dN; i++) 
-    W[i] = aDbl[N + dN + i]; 
-   
-  /* create variance matrix for each [commodity][strata] */
-  double *** mu = minCV_createMeanMatrix( I, dN, N, k, H, x, L, Nh, NhSize);
-  double *** V = minCV_createVarMatrix( I, dN, N, k, H, x, L, mu, Nh, NhSize);
- 
-  /* create a place to store temporary variances */ 
-  double *** RV = double3DMatrix(dN,H,k); 
-
-  for( i = 0; i < dN; i++) 
-    for( h = 0; h < H; h++) 
-      for( l = 0; l < k; l++) 
-        RV[i][h][l] = V[i][h][l]; 
-
-
-  /* create variance matrix for each [commodity]*/
-  double * Total = malloc( sizeof( double ) * dN );
-  for( i =0; i < dN; i++) 
-    Total[i] = aDbl[N + 2*dN + i]; 
- 
-  /* get the sample Size */ 
-  double * sampleSize = (double *) malloc( sizeof( double ) * H );
-  double * RSampleSize = (double *) malloc( sizeof( double ) * H );
-  for( i =0; i < H; i++) 
-    sampleSize[i] = aDbl[N + 3*dN + i]; 
- 
-  /* get max prob */ 
-  for( i =0; i < N; i++) 
-    prob[i] = aDbl[N + 3*dN + H + i]; 
-  packedStruct->prob = prob;
-
-  /* get prob matrix */
-  for( i =0; i < N*H; i++) 
-    probMatrix[i] = aDbl[2*N + 3*dN + H + i]; 
-  packedStruct->probMatrix = probMatrix;
-  
-  /* make assignments to struct */
-  packedStruct->H = H;
-  packedStruct->Nh = Nh;
-  packedStruct->NhSize = NhSize;
-  packedStruct->RNhSize = RNhSize;
-  packedStruct->NhAcres = NhAcres;
-  packedStruct->NhMax = NhMax;
-  packedStruct->acres = acres;
-  packedStruct->size = size;
-  packedStruct->L = L;
-  packedStruct->C = C;
-  packedStruct->T = T;
-  packedStruct->W = W;
-  packedStruct->V = V;
-  packedStruct->RV = RV;
-  packedStruct->Total = Total;
-  packedStruct->x = x;
-  packedStruct->k = k;
-  packedStruct->totalProbability = aDbl[NDbl - 3]; 
-  packedStruct->temp = aDbl[NDbl-2];
-  packedStruct->acreDif = aDbl[NDbl-1 ];
-  packedStruct->sampleSize = sampleSize;
-  packedStruct->RSampleSize = RSampleSize;
-  
-  return( (void *) packedStruct );
-}
-
-
-
-
-/* clean up for the substrata administrative data */
-void minCV_deleteSubstrata( minCV_adminStructPtr  a, size_t dN, size_t N )
-{
-  int i;
-  
-
-  /* first the vectors */
-  free( a->Nh );
-  a->Nh = NULL;
-  
-  free( a->prob );
-  a->prob = NULL;
-  
-  free( a->probMatrix );
-  a->probMatrix = NULL;
-  
-  free( a->NhSize );
-  a->NhSize = NULL;
-
-  free( a->NhAcres );
-  a->NhAcres = NULL;
-  
-  free( a->size );
-  a->size = NULL;
-  
-  free( a->acres );
-  a->acres = NULL;
-  
-  free( a->T );
-  a->T = NULL;
- 
- free( a->Total); 
-  a->Total = NULL; 
- 
-  free( a->sampleSize); 
-  a->sampleSize = NULL; 
-  
-  free( a->RSampleSize); 
-  a->RSampleSize = NULL; 
-
-  /* now the MDA */
-  freeMDA( (void*) a->L, a->H);
-  a->L = NULL; 
-  
-  freeMDA( (void*) a->V, dN);
-  a->V = NULL; 
-  
-  freeMDA( (void*) a->RV, dN);
-  a->RV = NULL; 
-  
-  for(i = 0; i < dN; i++)
-    freeMDA( (void*) (a->C)[i], N);
-  free( a->C );
-  a->C = NULL;
-
-  /* now the struct */
-  free( a );
-  a =  NULL;
-}
-
-
-/* function to check status */
-void minCV_diag( 
-            size_t i,   /* new Index */
-            size_t * I, /* current state */
-            double * Q, /* current cost */
-            void * A,   /* administrative data */
-            size_t dN,  /* number of distance matricies */
-            size_t N    /* number of elements within a state */
-    ) {
-
-  double *** V;
-  double *** mu;
-  size_t H, NhMax, d;
-  size_t * Nh;
-  double * T;
-  double * Total;
-  double * acres;
-  size_t * size;
-  size_t * NhSize;
-  double * NhAcres;
-  minCV_adminStructPtr a; 
-
-  /* cast A back to somethine useable */
-  a = (minCV_adminStructPtr) A; 
-  H = a->H;
-  Nh = a->Nh;
-  NhMax = a->NhMax;
-  T = a->T;
-  V = a->V;
-  mu = a->mu;
-  Total = a->Total;
-
-
-  acres = a->acres;
-  size = a->size;
-  NhSize = a->NhSize;
-  NhAcres = a->NhAcres;
-  double * sampleSize = a->sampleSize; 
-
-
-  Rprintf("\n************************* i = %d **************************\n",(int) i);
-  Rprintf("\nNhMax: %d\n", (int) NhMax);
- 
-  for( d =0; d < dN; d++) 
-    Rprintf("\nV[%d]\n",(int) d),
-    printMatrixFullDbl(V[d], N, H ); 
-  
-  for( d =0; d < dN; d++) 
-    Rprintf("\nmu[%d]\n",(int) d),
-    printMatrixFullDbl(mu[d], N, H ); 
-
-
-  Rprintf("\nQ\n");
-  Rprintf("sqrt(n) * CV_j - TCV_j\n");
-  for( d =0; d < dN; d++) 
-    Rprintf("%d:  %f\n",(int) d, Q[d]); 
-  
-  
-  /* probMatrix */ 
-  /*
-  Rprintf("\nprobMatrix\n");
-  for( d =0; d < N; d++) {
-    Rprintf("%d:  ",(int) d);
-  
-    for( f =0; f < H; f++) 
-      Rprintf("%f, ", probMatrix[H*d + f] );
-    
-    Rprintf("\n");
-  } 
-  */ 
-  /* prob */ 
-  /*
-  Rprintf("\nprob\n");
-  for( d =0; d < N; d++) 
-    Rprintf("%d:  %f\n",(int) d,  prob[d]); 
-   */ 
-  
-  Rprintf("\nNh\n");
-  for( d =0; d < H; d++) 
-    Rprintf("%d:  %d\n",(int) d, (int) Nh[d]); 
-
-  Rprintf("\nNhSize\n");
-  for( d =0; d < H; d++) 
-    Rprintf("%d:  %d\n",(int) d, (int) NhSize[d]); 
-  
-  Rprintf("\nNhAcres\n");
-  for( d =0; d < H; d++) 
-    Rprintf("%d:  %f\n",(int) d, NhAcres[d]); 
-  
-  Rprintf("\nSample Size\n");
-  for( d =0; d < H; d++) 
-    Rprintf("%d:  %f\n",(int) d, sampleSize[d]); 
-  
-  Rprintf("\nT\n");
-  for( d =0; d < dN; d++) 
-    Rprintf("%d:  %f\n",(int) d, T[d]); 
-  
-  Rprintf("\nTotal\n");
-  for( d =0; d < dN; d++) 
-    Rprintf("%d:  %f\n",(int) d, Total[d]); 
-
-}
-  
-
-/* SA helper functions */
-
-/* count the number of lables */
-size_t minCV_labelCount( size_t * label, size_t N ) {
-
-  int i,H;
-
-  /* enumerated labels are required with the maximum being the number of labels */
-  H = label[0];
-  for(i = 1; i < N; i++)
-    if ( label[i] > H ) H = label[i];
-
-  return(H + 1);
-}
-
-
-
-/* this is a function that creates and retrurns an array of sizes for the labels */
-size_t * minCV_labelTotalPSUs ( size_t * label, size_t N, size_t H ) {
-
-  size_t i;
-  size_t * labelCount;
-
-  labelCount = malloc( sizeof(size_t) * H);
-
-  /* initialize */
-  for(i = 0; i < H; i++) {
-    labelCount[i] = 0;
-  }
-
-  /* aggregate */
-  for(i = 0; i < N; i++) {
-    labelCount[label[i]] ++;
-  }
-
-  return(labelCount);
-
-}
-
-
-/* this is a function that creates and retrurns an array of sizes for the labels */
-size_t * minCV_labelTotalSegments ( size_t * label, size_t N, size_t H, size_t * size ) {
-
-  size_t i;
-  size_t * labelCount;
-
-  labelCount = malloc( sizeof(size_t) * H);
-
-  /* initialize */
-  for(i = 0; i < H; i++) {
-    labelCount[i] = 0;
-  }
-
-  /* aggregate */
-  for(i = 0; i < N; i++) {
-    labelCount[label[i]] += size[i];
-  }
-
-  return(labelCount);
-
-}
-
-
-/* this is a function that creates and retrurns an array of sizes for the labels */
-double * minCV_labelTotalAcres ( size_t * label, size_t N, size_t H, double * acres ) {
-
-  size_t i;
-  double * labelCount;
-
-  labelCount = malloc( sizeof(double) * H);
-
-  /* initialize */
-  for(i = 0; i < H; i++) {
-    labelCount[i] = 0;
-  }
-
-  /* aggregate */
-  for(i = 0; i < N; i++) {
-    labelCount[label[i]] += acres[i];
-  }
-
-  return(labelCount);
-
-}
-
-
-/* quick function to determine the maximum int in an array */
-size_t minCV_arrayMaxSize_t( size_t * a, size_t n ) {
-  size_t i, max;
-
-
-  max = a[0];
-
-  for( i = 1; i < n; i++)
-    if( a[i] > max ) max = a[i];
-
-  return( max);
-}
-
-
-/* quick function to determine the maximum size an acceptible substrata can be */
-size_t minCV_arrayMaxSubstrata( size_t * a, size_t n, size_t *segments, size_t *acres, size_t * NhSize , double * NhAcres ) {
-  size_t i, max;
-
-
-  max = a[0];
-
-  for( i = 1; i < n; i++)
-    if( a[i] > max ) max = a[i];
-
-  return( max);
-}
-
-
-/* quick function to determine the maximum valued index in an array */
-size_t minCV_arrayMaxIndexDbl( double * a, size_t n ) {
-  size_t i, max;
-
-
-  max = 0;
-
-  for( i = 1; i < n; i++)
-    if( a[i] > a[max] ) max = i;
-
-  return( max);
-}
-
-
-/* this matrix identifies each item with all other items that can have labels assigned */
-size_t ** minCV_labelCreateMaster( size_t * label, size_t N, size_t H, size_t NhMax ) {
-
-  size_t i,j,a;
-
-  /* allocate memory for InTo matrix */
-  size_t ** L =  malloc(sizeof(size_t * ) * H );
-
-  for( i = 0; i < H; i ++) {
-    L[i] = malloc(sizeof(size_t) * NhMax );
-  }
-
-  /* set default */
-  for( i = 0; i < H; i++ ) {
-    for( j = 0; j < NhMax; j++) {
-      L[i][j] = N+1;
-    }
-  }
-
-  /* assign each item to index */
-  for(i = 0; i < N; i++) {
-    j = 0;
-    a = label[i];
-    while(L[a][j] != N+1) j=j+1;
-
-    L[a][j] = i;
-  }
-
-  return(L);
-}
-
 
 

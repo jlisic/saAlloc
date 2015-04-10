@@ -17,13 +17,15 @@ saMinCV(
      targetCV, 
      sampleSize, 
      weightMatrix, 
+     domainMatrixList,
      iterations=1000, 
-     sampleIterations=100, 
-     sampleUpdateIterations=100,
-     cooling=0, 
-     segments=rep(1,length(label)), 
-     PSUAcres=rep(1,length(label)), 
-     targetVarWithin=rep(0,ncol(x)),
+     sampleSizeIterations=3, 
+     recalcIterations=10000,
+     locationAdjustment,
+     scaleAdjustment,
+     p = 2,                   # l2 norm of the penalty function
+     penalty = -1,            # negative penalties are ignored
+     cooling = 0,
      preserveSatisfied=TRUE
    )
 }
@@ -69,29 +71,36 @@ saMinCV(
   a particular strata relative to the PSU's other strata weight the more likely
   it is to be moved to that strata. 
   }
+  \item{domainMatrixList}{
+  a list of matricies of length H, where each matrix is of size K by J. 
+  }
   \item{iterations}{
   Number of iterations to perform of the Simulated Annealing procedure.
   }
-  \item{sampleIterations}{
+  \item{sampleSizeIterations}{
   Number of iterations for each sample Allocation update step
   (0 = no changes).
   }
-  \item{sampleUpdateIterations}{
-  Number of iterations to wait until performing the sample update step 
+  \item{recalcIterations}{
+  Number of iterations to wait until recalculating the variance 
   (0 = every iteration).
   }
+  \item{locationAdjustment}{
+  A constant value added to S^2 for each replicate, this is of the same
+  size and layout of x.  
+  }
+  \item{scaleAdjustment}{
+  A constant value multiplied by S^2 (before the location adjustment)  for each 
+  replicate, this is of the same size and layout of x.  
+  }
+  \item{penalty}{
+    The penalty scalar used for each of the J penalties, negative penalties are ignored.
+  }
+  \item{p}{
+    The exponent for the penalty fuction, fractional exponents are available.
+  }
   \item{cooling}{
-  Cooling Schedule (0 = exchange only)
-  }
-  \item{segments}{
-  If prior clustering is performed to form sampling units, this allows 
-  }
-  \item{PSUAcres}{
-  PSU size (originally done in acres), 
-  }
-  \item{targetVarWithin}{
-  If prior clustering is performed and assumed constant across the population 
-  then it can be handled here.
+    Cooling Schedule (0 = exchange only)
   }
   \item{preserveSatisfied}{
    TRUE implies that any constraint that is met for an accepted state is kept,
@@ -104,8 +113,9 @@ saMinCV(
     "U":        uniform random variable, 
     "accepted": 1 - accepted, 
                 0 - not accepted 
-    "from":     index of PSU, 
-    "to":       attempted move of PSU, 
+    "selected": index of PSU, 
+    "from":     current stratum of selected PSU , 
+    "to":       candidate stratum of selected PSU, 
     "n_h":      sample size (h is the index or label associated with strata),
     column names or numbers if not presented
   }

@@ -1,4 +1,5 @@
 
+
 # plot for s3 saAlloc object
 # together == T, all vars on one plot
 # together == F, separate plots for each commodity
@@ -18,16 +19,53 @@ plot.saAlloc <- function( x, together=TRUE, ... ) {
 
 
   #### plot all variables on the same plot
+  
+  accepted <- accept[,'accepted']
+  
+  
+  if( sum(accepted) == 0 ) {
+    print("No change to plot")
+    return
+  }
+
+  a <- accept[,'accepted']
+  changed <- a
+
+for( i in 1:iterations ) {
+  if( a[i] == 1 ) lastAccept = i
+  changed[i] = lastAccept
+}
+
+
+print("getting changes")
+#  # get changes 
+#  for( i in 1:iterations )  {
+#    if( i == 1) {  
+#      changed <- 1
+#      lastAccept <- changed 
+#    } else {
+#      a <- accept[i,]
+#     if( a['U'] <= a['T'] ) {
+#        lastAccept <- i
+#        changed <- c(changed, lastAccept) 
+#      } else {
+#        # make a copy of values so we don't change the accepted sequence
+#        changed <- c(changed, lastAccept) 
+#      }
+#    }
+#  }
+print("done getting changes")
 
   # plot first variable 
   plot(
-    1:iterations,
-    accept[,variables[1]],
+    0:(iterations-1),
+    accept[changed,variables[1]],
     type='l', 
-    ylim=c(0,max(accept[,variables])) ,
+    ylim=range(accept[changed,variables]) ,
     xlab='Iterations',
     ylab='CV'
   )
+  
 
   # add title
   if(together) {
@@ -42,8 +80,8 @@ plot.saAlloc <- function( x, together=TRUE, ... ) {
     if( together ) {
       for( i in 2:length(variables) ) {
         points(
-            1:iterations,
-            accept[,variables[i] ],
+            0:(iterations-1),
+            accept[changed ,variables[i] ],
             type='l',
             col=i
           )
@@ -51,8 +89,8 @@ plot.saAlloc <- function( x, together=TRUE, ... ) {
     } else {
       for( i in 2:length(variables) ) {
         plot(
-          1:iterations,
-          accept[,variables[i] ],
+          0:(iterations-1),
+          accept[changed,variables[i] ],
           type='l',
           col=i,
           xlab='Iterations',
@@ -61,8 +99,6 @@ plot.saAlloc <- function( x, together=TRUE, ... ) {
         title(sprintf("Trace of CV for %s",variables[i]))
       }
     }
-
-
   }
 
   # add legend
