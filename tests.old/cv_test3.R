@@ -40,9 +40,8 @@ sampleSize <- rep(4,H)
 #targetCV <- rep(expectedVar,K)
 targetCV <- c( 0.0040, 0.0060 )
 
-write.csv(x ,'test.csv')
 
-
+print( saAlloc:::.cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE) )
 
 
 if ( F ) {
@@ -51,15 +50,11 @@ test <- saSampleAlloc(
   label=strata,
   targetCV=targetCV,
   sampleSize=sampleSize,
-  weightMatrix=probMatrix,            # missing handled
-  sampleSizeIterations=3,
-  penalty=penalty,            # negative penalties are ignored
-  preserveSatisfied=FALSE,
-  locationAdjustment=x,
-  scaleAdjustment=scaleAdjustment
+  sampleSizeIterations=10000,
+  penalty=penalty            # negative penalties are ignored
   ) 
 
-print( .cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE, locationAdjustment=x, scaleAdjustment=scaleAdjustment) )
+print( saAlloc:::.cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE))
 }
 
 

@@ -23,7 +23,14 @@ saMinCV <- function(
   if( !is.matrix(x) ) {
     stop("x must be a matrix") 
   }
-  
+ 
+  # get colnames for x 
+  if( is.null(colnames(x)) ) {
+    x.colnames <- sprintf("%d",1:K)
+  } else {
+    x.colnames <- colnames(x)
+  }
+
   Cprog <- proc.time()
   
   # transform label  
@@ -90,8 +97,10 @@ saMinCV <- function(
 
   if( missing(domainMatrixList) ) {
     J <- K
+    domainMatrixList.names <- x.colnames
     domainMatrix <- rep(c(diag(K)),H)
   } else {
+    domainMatrixList.names <- names(domainMatrixList) 
     J <- ncol(domainMatrixList[[1]])
     if( J < K) stop("Error J < K")
     if( J == K) {
@@ -187,13 +196,13 @@ saMinCV <- function(
   } else if( length(names(targetCV)) == 0 ) {
     warning( "targetCV has no names, assuming that the targetCV are in the same order as x." ) 
   # error if there are names but don't match what we find in unique.label
-  } else if( !identical( sort(names(targetCV)), sort(names(domainMatrix)))  ) {
-    stop( "targetCV names do match column names of x" ) 
+  } else if( !identical( sort(names(targetCV)), sort(domainMatrixList.names))  ) {
+    stop( "targetCV names do match column names of domainMatrix" ) 
   } else if( anyDuplicated( names(targetCV) ) != 0  ) {
     stop( "targetCV names do exist but are not unique" ) 
   # at this point everthing seems ok, so reorder the sample size
   } else {
-    targetCV <- targetCV[ names(domainMatrix) ] 
+    targetCV <- targetCV[ domainMatrixList.names ] 
   }
   
   costChangeSize <- 6 + H + J  
@@ -241,12 +250,6 @@ saMinCV <- function(
 
   #################### RETURN DATA ######################################
 
-  # get colnames for x 
-  if( is.null(colnames(x)) ) {
-    x.colnames <- sprintf("%d",1:K)
-  } else {
-    x.colnames <- colnames(x)
-  }
 
   a <<- unlist(r.result[18])
 
@@ -274,20 +277,20 @@ saMinCV <- function(
   ## final and initial CVs
   if( missing(locationAdjustment) & missing(scaleAdjustment) ) { 
     print("no adjustment")
-    CVStart  <- .cv2( x, rlabel, newSampleSize, average=TRUE)
-    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE )
+    CVStart  <- saAlloc:::.cv2( x, rlabel, newSampleSize, average=TRUE)
+    CV  <- saAlloc:::.cv2( x, newRlabel, newSampleSize, average=TRUE )
   } else if( missing(locationAdjustment) )  { 
     print("just scale adjustment")
-    CVStart  <- .cv2( x, rlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
-    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
+    CVStart  <- saAlloc:::.cv2( x, rlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
+    CV  <- saAlloc:::.cv2( x, newRlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
   } else if( missing(scaleAdjustment) )  { 
     print("just location adjustment")
-    CVStart  <- .cv2( x, rlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment)
-    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment)
+    CVStart  <- saAlloc:::.cv2( x, rlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment)
+    CV  <- saAlloc:::.cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment)
   } else {
     print("both adjustments")
-    CVStart  <- .cv2( x, rlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
-    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
+    CVStart  <- saAlloc:::.cv2( x, rlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
+    CV  <- saAlloc:::.cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
   }
 
 
