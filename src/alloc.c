@@ -115,7 +115,7 @@ void alloc_sampleSizeChange (
   // if there is nothing to do, do nothing 
   if( iter == 0) return;
  
-  for(h = 0; h < H; h++) nhSumStart += nh[h]; 
+  //for(h = 0; h < H; h++) nhSumStart += nh[h]; 
 
   // copy values over
   for(h = 0; h < H; h++) test_nh[h] = nh[h]; 
@@ -216,9 +216,11 @@ void alloc_sampleSizeChange (
     }
 
    // sanity check 
+   /*
     nhSumStop = 0; 
     for(h = 0; h < H; h++) nhSumStop += test_nh[h]; 
-    if( nhSumStop != nhSumStart ) printf(" nhSumStop = %f , nhSumStart = %f\n", nhSumStop, nhSumStart);
+    if( nhSumStop - nhSumStart ) printf(" nhSumStop = %f , nhSumStart = %f\n", nhSumStop, nhSumStart);
+    */
 
     // return min_delta
     if( a != NULL ) a[i] = min_delta;

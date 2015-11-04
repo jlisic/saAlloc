@@ -10,7 +10,7 @@ plotDir <- "~/src/saAllocDoc/plots"
 
 set.seed(400)
 
-Nh <- c(1,1,8)*10
+Nh <- c(1,1,8)*100
 K  <- 2 
 R  <- 1 
 
@@ -59,9 +59,9 @@ print( saAlloc:::.cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE))
 
 
 
-#iterations <- 41024
-iterations <- 1000
-iterations <- 225
+iterations <- 41024
+#iterations <- 1000
+#iterations <- 225
 
 # test location adjustment
 #locationAdjustment <- sqrt(x)
