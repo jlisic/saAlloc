@@ -106,9 +106,16 @@ void alloc_sampleSizeChange (
   double minSampleSize = 2.0; // minimum sample size
   double min_delta, delta;
   size_t Hi, Hj, optHj;
-  
+
+  /* sanity check */
+  double nhSumStart = 0;
+  double nhSumStop = 0;
+ 
+
   // if there is nothing to do, do nothing 
   if( iter == 0) return;
+ 
+  for(h = 0; h < H; h++) nhSumStart += nh[h]; 
 
   // copy values over
   for(h = 0; h < H; h++) test_nh[h] = nh[h]; 
@@ -208,9 +215,15 @@ void alloc_sampleSizeChange (
       test_nh[Hi] += 1.0; // undo our change 
     }
 
+   // sanity check 
+    nhSumStop = 0; 
+    for(h = 0; h < H; h++) nhSumStop += test_nh[h]; 
+    if( nhSumStop != nhSumStart ) printf(" nhSumStop = %f , nhSumStart = %f\n", nhSumStop, nhSumStart);
+
     // return min_delta
     if( a != NULL ) a[i] = min_delta;
   }
+    
 
   // copy values over
   for(h = 0; h < H; h++) nh[h] = test_nh[h]; 

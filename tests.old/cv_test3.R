@@ -10,7 +10,7 @@ plotDir <- "~/src/saAllocDoc/plots"
 
 set.seed(400)
 
-Nh <- c(10,10,8)*100
+Nh <- c(1,1,8)*10
 K  <- 2 
 R  <- 1 
 
@@ -38,7 +38,7 @@ penalty  <- rep(100,K)
 sampleSize <- rep(4,H)
 #expectedVar <- sqrt(   sum( ( (1:H)^2 + 100) * (Nh^2/sampleSize)  )  ) / (100 * sum(Nh)) 
 #targetCV <- rep(expectedVar,K)
-targetCV <- c( 0.0040, 0.0060 )
+targetCV <- c( 0.0040, 0.0050 )
 
 
 print( saAlloc:::.cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE) )
@@ -58,19 +58,23 @@ print( saAlloc:::.cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE))
 }
 
 
+
 #iterations <- 41024
-iterations <- 10000
-#iterations <- 225
+iterations <- 1000
+iterations <- 225
 
 # test location adjustment
-locationAdjustment <- sqrt(x)
-scaleAdjustment <- sqrt(x)
+#locationAdjustment <- sqrt(x)
+#scaleAdjustment <- sqrt(x)
 p <- 2
+
+
+
 
 
 colnames(x) <- c('x','y')
 
-
+set.seed(100)
 test2 <- saMinCV( 
   x,
   label=strata,
@@ -80,11 +84,21 @@ test2 <- saMinCV(
   weightMatrix=probMatrix,            # missing handled
   sampleSizeIterations=3,
   penalty=penalty,            # negative penalties are ignored
-  cooling=0.02,
+  cooling=0.0,
   #locationAdjustment=locationAdjustment,
   #scaleAdjustment=scaleAdjustment,
   preserveSatisfied=TRUE
   ) 
+
+print(summary(test2))
+stop("hi2u")
+
+x.var <- aggregate( x, by=list(strata), var)[,-1]
+x.N <- aggregate( x, by=list(strata), length)[,-1]
+print( sqrt(colSums( x.var * x.N^2 / sampleSize)) / colSums(x) )
+
+
+
 
 
 

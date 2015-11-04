@@ -44,6 +44,21 @@ void minCV_init (
   return;
 }
   
+/* program flow */
+/*
+ * within SA
+ *
+ * costChange
+ *
+ *
+ */
+
+
+
+
+
+
+
 
 
 /* helper function  */
@@ -593,6 +608,7 @@ double minCV_costChange (
   double obj, candidate_obj;
 
 
+
   // apply the variance change 
   // note that we only update the cv if there is a change in strata 
   if( a->Hi != a->Hj ) 
@@ -643,6 +659,10 @@ double minCV_costChange (
       a->iterSampleSize, 
       NULL
     );
+  
+
+  //if( nhSum != nhSumCan ) 
+  //printf(" nhSum = %f , nhSumCan = %f\n", nhSum, nhSumCan);
 
 
   delta =  cv_objectiveFunctionCompare( 
@@ -708,7 +728,8 @@ void minCV_update (
   size_t J = a->J;
   size_t Hi = a->Hi;
   size_t Hj = a->Hj; 
-
+  
+  
   /* restore prior state candidates */
   if( accept == 0) {
 //    printf("accept == 0\n");
@@ -801,8 +822,9 @@ void minCV_update (
   a->totalProb += a->prob[i];
 
   /* change back nh */
-  a->nh[Hj] = a->candidate_nh[Hj]; 
-  a->nh[Hi] = a->candidate_nh[Hi]; 
+  //a->nh[Hj] = a->candidate_nh[Hj]; 
+  //a->nh[Hi] = a->candidate_nh[Hi]; 
+  for( h=0; h < H; h++) a->nh[h] = a->candidate_nh[h]; 
 
 
   /* change back Nh */
@@ -834,7 +856,7 @@ void minCV_update (
       }
     }
   } 
-  
+ 
   return;
 }
 

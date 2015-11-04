@@ -277,19 +277,19 @@ saMinCV <- function(
   ## final and initial CVs
   if( missing(locationAdjustment) & missing(scaleAdjustment) ) { 
     print("no adjustment")
-    CVStart  <- saAlloc:::.cv2( x, rlabel, newSampleSize, average=TRUE)
+    CVStart  <- saAlloc:::.cv2( x, rlabel, sampleSize, average=TRUE)
     CV  <- saAlloc:::.cv2( x, newRlabel, newSampleSize, average=TRUE )
   } else if( missing(locationAdjustment) )  { 
     print("just scale adjustment")
-    CVStart  <- saAlloc:::.cv2( x, rlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
+    CVStart  <- saAlloc:::.cv2( x, rlabel, sampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
     CV  <- saAlloc:::.cv2( x, newRlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
   } else if( missing(scaleAdjustment) )  { 
     print("just location adjustment")
-    CVStart  <- saAlloc:::.cv2( x, rlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment)
+    CVStart  <- saAlloc:::.cv2( x, rlabel, sampleSize, average=TRUE, locationAdjustment=locationAdjustment)
     CV  <- saAlloc:::.cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment)
   } else {
     print("both adjustments")
-    CVStart  <- saAlloc:::.cv2( x, rlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
+    CVStart  <- saAlloc:::.cv2( x, rlabel, sampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
     CV  <- saAlloc:::.cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
   }
 

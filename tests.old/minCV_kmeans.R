@@ -13,18 +13,21 @@ nLow <- 60
 # high density cultivation, few farms
 highCult <- cbind( 
                 rnorm(nHigh, 500, 80),
-                rlnorm(nHigh, 1,.3)
+                rnorm(nHigh, 500, 80)
+                #rlnorm(nHigh, 1,.3)
               )
 
 # medium density cultivation
 mediumCult <- cbind( 
                 rnorm(nMed,200,100),
-                rlnorm(nMed,1.5,.3)
+                rnorm(nMed,200,100)
+                #rlnorm(nMed,1.5,.3)
               )
 
 # low density cultivation, many farms and non-farms 
 lowCult <- cbind( 
              rnorm( nLow,10,40),
+             #rnorm( nLow,10,40),
              rlnorm( nLow,2)
            )
                
@@ -42,7 +45,10 @@ lowCult[lowCult[,2] > 40 ,2] <- 40
 x <- rbind( highCult, mediumCult, lowCult)
 
 
+plot( x, col=c(rep(1,nHigh), rep(2,nMed), rep(3,nLow)))
+
 ################# set parameters ######################
+
 
 N <- nrow(x)
 H <- 3 
