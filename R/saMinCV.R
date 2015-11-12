@@ -250,8 +250,7 @@ saMinCV <- function(
 
   #################### RETURN DATA ######################################
 
-
-  a <<- unlist(r.result[18])
+  debug.label <<- r.result[8]
 
   ## change and other accept data
   a <- matrix(unlist(r.result[18]),ncol=costChangeSize ,byrow=T)

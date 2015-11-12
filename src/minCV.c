@@ -728,12 +728,15 @@ void minCV_update (
   size_t J = a->J;
   size_t Hi = a->Hi;
   size_t Hj = a->Hj; 
-  
+ 
+
+  double nhSumStop, nhSumStart;
+  for(h = 0, nhSumStart = 0; h < H; h++) nhSumStart += a->nh[h]; 
+
+
   
   /* restore prior state candidates */
   if( accept == 0) {
-//    printf("accept == 0\n");
-  
 
     /* change back mu, var and adjustments */
     for( k = 0; k < K; k++) {
@@ -764,7 +767,6 @@ void minCV_update (
 
   /* record objective function and sample sizes for diagnostics */
   if ( accept == 2) { 
-//    printf("accept == 2\n");
 
     /* record what strata the selected PSU is moving to */
     costChange[4] = Hi;
@@ -777,14 +779,11 @@ void minCV_update (
       costChange[6 + H +j] = a->candidate_cv[j]; 
     }
       
-    /* change back nh */
-    a->candidate_nh[Hj] = a->nh[Hj]; 
-    a->candidate_nh[Hi] = a->nh[Hi]; 
-
-    /* change back Nh */
-    a->candidate_Nh[Hj] = a->Nh[Hj]; 
-    a->candidate_Nh[Hi] = a->Nh[Hi]; 
-  
+    /* change back nh & Nh */
+    for( h = 0; h < H; h++) {
+      a->candidate_nh[h] = a->nh[h]; 
+      a->candidate_Nh[h] = a->Nh[h]; 
+    }
 
 //    for( j = 0; j < H + J + 6; j++) printf("%4.2f ", costChange[j]);
 //    printf("\n");
@@ -794,17 +793,18 @@ void minCV_update (
   
   /* optimize sample size */
   if ( accept == 3) { 
-//    printf("accept == 3\n");
+    //printf("accept == 3\n");
     //minCV_sampleSizeChange ( A, Q, R, dN, N, a->sampleIter);
     return;
   }
     
-//  printf("accept == 1\n");
+  //printf("accept == 1, i=%d, Hj=%d, I[i]%d\n", (int) i, (int) Hj, (int) I[i]);
 
   // check if there is no change 
-  if( a->Hi == a->Hj)  
+  if( a->Hi == a->Hj) { 
     for(h=0; h < H; h++) if( a->nh[h] != a->candidate_nh[h] ) break;
-  if( h == H) return; 
+    if( h == H) return; 
+  }
   
   /* update the strata assignment */
   I[i] = Hj;
@@ -822,14 +822,12 @@ void minCV_update (
   a->totalProb += a->prob[i];
 
   /* change back nh */
-  //a->nh[Hj] = a->candidate_nh[Hj]; 
-  //a->nh[Hi] = a->candidate_nh[Hi]; 
-  for( h=0; h < H; h++) a->nh[h] = a->candidate_nh[h]; 
+  for( h=0; h < H; h++) {
+    a->nh[h] = a->candidate_nh[h]; 
+    a->Nh[h] = a->candidate_Nh[h]; 
+  }
 
 
-  /* change back Nh */
-  a->Nh[Hj] = a->candidate_Nh[Hj]; 
-  a->Nh[Hi] = a->candidate_Nh[Hi]; 
 
   /* change back mu, var and adjustments */
   for( k = 0; k < K; k++) {
@@ -856,6 +854,9 @@ void minCV_update (
       }
     }
   } 
+    
+  for(h = 0, nhSumStop = 0; h < H; h++) nhSumStop += a->nh[h]; 
+  if( nhSumStop != nhSumStart ) printf("update: nhSumStop = %f , nhSumStart = %f\n", nhSumStop, nhSumStart);
  
   return;
 }

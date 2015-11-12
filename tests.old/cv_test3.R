@@ -10,23 +10,54 @@ plotDir <- "~/src/saAllocDoc/plots"
 
 set.seed(400)
 
-Nh <- c(1,1,8)*100
+Nh <- c(10,10,8)*100
 K  <- 2 
 R  <- 1 
 
 H <- length(Nh)
+sampleSize <- rep(20,H)
 
-# create x
-x <-c()
+# center
+centers <- 
+ matrix(c( 
+     60, 10, 
+     20, 10, 
+     20, 30 
+ ), ncol=2, byrow=T)
+
+vars <- 
+ matrix(c( 
+     6,  6, 
+     6,  6, 
+     6,  6 
+ ), ncol=2, byrow=T)
+
+
+x <- c() 
 for(k in 1:K){
-x <- cbind(x, c(unlist(apply( cbind(Nh,1:H), 1, function(x) rnorm(x[1]*R,mean=100 + x[2]^2 ,sd=x[2])))))
+  print(k)
+x <- cbind( x, 
+       unlist( apply(
+       cbind( Nh, centers, vars) ,
+       1,
+       function(x) {
+         print(x);return( rnorm( x[1], mean=x[1+k], sd=x[1+2+k] ))
+       }
+         )
+     )
+ )
 }
+
 
 # create strata
 strata <- c(unlist(apply( cbind(Nh,1:H) ,1, function(x) rep(x[2],x[1]) ))) -1
-                      
-y <- t( matrix( t(x) , nrow=K*R) ) 
+print( "true alloc")
+print( saAlloc:::.cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE) )
 
+plot(x,col=strata+1)
+
+# kmeans
+y <- t( matrix( t(x) , nrow=K*R) ) 
 init.kmeans <- kmeans(y, H ) 
 strata <- init.kmeans$cluster - 1
 
@@ -35,12 +66,12 @@ probMatrix <- matrix( 1/H, nrow=sum(Nh) ,ncol=H)
 
 
 penalty  <- rep(100,K) 
-sampleSize <- rep(4,H)
 #expectedVar <- sqrt(   sum( ( (1:H)^2 + 100) * (Nh^2/sampleSize)  )  ) / (100 * sum(Nh)) 
 #targetCV <- rep(expectedVar,K)
-targetCV <- c( 0.0040, 0.0050 )
+targetCV <- c( 0.02, 1 )
 
 
+print( "kmeans")
 print( saAlloc:::.cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE) )
 
 
@@ -59,9 +90,10 @@ print( saAlloc:::.cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE))
 
 
 
-iterations <- 41024
+iterations <- 1000000
 #iterations <- 1000
 #iterations <- 225
+#iterations <- 10
 
 # test location adjustment
 #locationAdjustment <- sqrt(x)
@@ -70,7 +102,12 @@ p <- 2
 
 
 
-
+# cost change
+# 0: cost change  
+# 1: U random variable 
+# 2: T (0 if accept, otherwise temp )
+# 3: move from
+# 4: 
 
 colnames(x) <- c('x','y')
 
@@ -84,25 +121,28 @@ test2 <- saMinCV(
   weightMatrix=probMatrix,            # missing handled
   sampleSizeIterations=3,
   penalty=penalty,            # negative penalties are ignored
-  cooling=0.0,
+  cooling=0,
   #locationAdjustment=locationAdjustment,
   #scaleAdjustment=scaleAdjustment,
   preserveSatisfied=TRUE
   ) 
 
+
+plot(test2)
+
 print(summary(test2))
-stop("hi2u")
-
-x.var <- aggregate( x, by=list(strata), var)[,-1]
-x.N <- aggregate( x, by=list(strata), length)[,-1]
-print( sqrt(colSums( x.var * x.N^2 / sampleSize)) / colSums(x) )
 
 
 
 
+##################################################################################
 
 
-if( T ) {
+
+
+
+
+if( F ) {
   # compare saMinCV output to R output
   print("initial")
   print( saAlloc:::.cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE ))
@@ -160,7 +200,7 @@ if( T ) {
 
 
 # distribution of accepted moves
-
+if( F) {
 moveFreq <- function( y ) {
   # get transitions
   y <- y$accept[-1,]
@@ -183,9 +223,11 @@ moveFreq <- function( y ) {
 
 a <- moveFreq(test2)
 b <- a[ a$from != a$to,]
+}
 
 
-if ( T ) {
+
+if ( F ) {
 
 
 # initial

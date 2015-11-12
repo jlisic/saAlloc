@@ -18,6 +18,27 @@
 /* and also for running on 32 bit archs */
 #define F_SIZET "%zu"
 
+
+
+
+
+/* byebye */
+/*
+void byebye ( void ) {
+  free(I);
+  free(IFin);
+  free(QFin);
+
+//  deleteMDA( (void *) domain, MDA_SIZE_T, 3, H, K); 
+
+  minCV_delete( A, K, N );
+}
+*/
+
+
+
+
+
 /**************************** MAIN R ******************************************/
 /* read in input and output from R                                            */
 /*  -- old --
@@ -101,7 +122,8 @@ void R_minCV (
   double * Q  =  calloc(1, sizeof(double));
   
 
-
+  /* set what to do on exit */
+  //atexit( byeybye );
 
   /***** 0.3 CREATE DATA SET *****/
   
@@ -176,17 +198,16 @@ void R_minCV (
   /* copy index back */
   for( i=0; i < N; i++) IInt[i] = (int) I[i];
 
-  /* clean up */
   free(I);
   free(IFin);
   free(QFin);
 
 //  deleteMDA( (void *) domain, MDA_SIZE_T, 3, H, K); 
 
-  /* app specific clean up */ 
   minCV_delete( A, K, N );
 
   return;
+
 }
 
 

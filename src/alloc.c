@@ -108,8 +108,10 @@ void alloc_sampleSizeChange (
   size_t Hi, Hj, optHj;
 
   /* sanity check */
-  double nhSumStart = 0;
-  double nhSumStop = 0;
+  double nhSumStart;
+  double nhSumStop;
+
+  for(h = 0, nhSumStart = 0; h < H; h++) nhSumStart += nh[h]; 
  
 
   // if there is nothing to do, do nothing 
@@ -216,11 +218,8 @@ void alloc_sampleSizeChange (
     }
 
    // sanity check 
-   /*
-    nhSumStop = 0; 
-    for(h = 0; h < H; h++) nhSumStop += test_nh[h]; 
-    if( nhSumStop - nhSumStart ) printf(" nhSumStop = %f , nhSumStart = %f\n", nhSumStop, nhSumStart);
-    */
+    for(h = 0, nhSumStop = 0; h < H; h++) nhSumStop += test_nh[h]; 
+    if( nhSumStop != nhSumStart ) printf("alloc: nhSumStop = %f , nhSumStart = %f\n", nhSumStop, nhSumStart);
 
     // return min_delta
     if( a != NULL ) a[i] = min_delta;

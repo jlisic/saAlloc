@@ -54,10 +54,11 @@ double * sa(
 
     // print status every 1000th 
     if( m > 1 ) { 
-      if( m < 100000 ) {
+      if( m < 10000 ) {
         Rprintf("Percent Complete: %d\%\r", (int) (100*i)/m);
-      } else if( (1000 * i) % m == 0 ) {
-        Rprintf("Percent Complete: %d\%\r", (int) (100*i)/m);
+      } else if( (1000 * i) % 65535 == 0 ) {
+        Rprintf("Percent Complqte: %d\%\r", (int) (100*i)/m);
+        //R_checkUserInterrupt();
       }
     }
     
@@ -98,15 +99,19 @@ double * sa(
 
         updateFunction(1, newI, I, Q, J, R, D, A, dN, N, NULL);   
 
-      } else { }  
+      } 
       // 4. else s_{i+1} = s_{i} 
+      // accept state 0:
+      // copy back to the candidate states the original values
       updateFunction(0, newI, I, Q, J, R, D, A, dN, N, NULL );   
 
     }
       
     // update cost change 
+    // accept state 2:
+    // change back candidate states and copy back  
     updateFunction(2, newI, I, Q, J, R, D, A, dN, N, &(costChange[i * costChangeSize ]) );   
-    //diagFunction(i,I,Q,A,dN,N);
+    //if( newCostChange < 0 ) diagFunction(i,I,Q,A,dN,N);
 
     // 6. ommitted, it is implemented as the while loop 
     // 6. else goto 1 
