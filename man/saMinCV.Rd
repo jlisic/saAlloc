@@ -94,17 +94,18 @@ saMinCV(
   replicate, this is of the same size and layout of x.  
   }
   \item{penalty}{
-    The penalty scalar used for each of the J penalties, negative penalties are ignored.
+  The  penalty vector used for each of the J penalties, penalties with negative
+  elements are ignored.  A scalar value may be used, and will be repeated for all CVs. 
   }
   \item{p}{
-    The exponent for the penalty fuction, fractional exponents are available.
+  The exponent for the penalty fuction, fractional exponents are available.
   }
   \item{cooling}{
-    Cooling Schedule (0 = exchange only)
+  Cooling Schedule (0 = exchange only)
   }
   \item{preserveSatisfied}{
-   TRUE implies that any constraint that is met for an accepted state is kept,
-   FALSE allows for met CVs to be violated by accepted states.
+  TRUE implies that any constraint that is met for an accepted state is kept,
+  FALSE allows for met CVs to be violated by accepted states.
  } 
  }
 \value{

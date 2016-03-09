@@ -39,31 +39,31 @@ double * sa(
   double T;                  /* value of cooling schedule                     */
   double U;                  /* U(0,1) random variable                        */
 
-  /* take care of R random number generator */
+/* take care of R random number generator */
   GetRNGstate();
   i = 0;
 
-  /* initialize the algorithm */
-  //Rprintf("\n****************** init ****************\n");
+/* initialize the algorithm */
+//Rprintf("\n****************** init ****************\n");
   initSAFunction( I, Q, D, A, dN, N);
  
   while( i < m ) {
-  //Rprintf("\n****************** start = %d ****************\n", (int) i );
-  //diagFunction(i,I,Q,A,dN,N);
+//Rprintf("\n****************** start = %d ****************\n", (int) i );
+//diagFunction(i,I,Q,A,dN,N);
 
 
     // print status every 1000th 
     if( m > 1 ) { 
       if( m < 10000 ) {
-        Rprintf("Percent Complete: %d\%\r", (int) (100*i)/m);
+        Rprintf("Percent Complete: %4.2f\%\r", (float) (100*i)/m);
       } else if( (1000 * i) % 65535 == 0 ) {
-        Rprintf("Percent Complqte: %d\%\r", (int) (100*i)/m);
+        Rprintf("Percent Complete: %4.2f\%\r", (float) (100*i)/m);
         //R_checkUserInterrupt();
       }
     }
     
     
-    // 1. select a potential move t_{i+1} 
+// 1. select a potential move t_{i+1} 
     newI = randomStateSAFunction( I, Q, J, R, D, A, dN, N);
 
     // if there are no possible movements we terminate 
@@ -76,8 +76,8 @@ double * sa(
     costChange[i * costChangeSize + 3] = newI + 1; // move from 
   
     newCostChange = costChangeFunction( newI, I, Q, J, R, D, A, dN, N);
-    //diagFunction(i,I,Q,A,dN,N);
-//    printf("costChangeFunction - %f\n", newCostChange);  
+//diagFunction(i,I,Q,A,dN,N);
+//printf("costChangeFunction - %f\n", newCostChange);  
     costChange[i * costChangeSize] = newCostChange;
 
     // 2. if the move improves the objective function then s_{i+1} = t_{i+1} 
@@ -100,29 +100,28 @@ double * sa(
         updateFunction(1, newI, I, Q, J, R, D, A, dN, N, NULL);   
 
       } 
-      // 4. else s_{i+1} = s_{i} 
-      // accept state 0:
-      // copy back to the candidate states the original values
+// 4. else s_{i+1} = s_{i} 
+// accept state 0:
+// copy back to the candidate states the original values
       updateFunction(0, newI, I, Q, J, R, D, A, dN, N, NULL );   
 
     }
       
-    // update cost change 
-    // accept state 2:
-    // change back candidate states and copy back  
+// update cost change 
+// accept state 2:
+// change back candidate states and copy back  
     updateFunction(2, newI, I, Q, J, R, D, A, dN, N, &(costChange[i * costChangeSize ]) );   
-    //if( newCostChange < 0 ) diagFunction(i,I,Q,A,dN,N);
 
-    // 6. ommitted, it is implemented as the while loop 
-    // 6. else goto 1 
-    //
+// 6. ommitted, it is implemented as the while loop 
+// 6. else goto 1 
+//
 
     i++; 
   } 
  
   PutRNGstate();
   
-  // output status   
+// output status   
   Rprintf("Percent Complete: %d\%\n", (int) (i*100)/m  );
 
 

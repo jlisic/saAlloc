@@ -120,7 +120,7 @@ saMinCV <- function(
   } else {
 
     if( length(penalty) == 1 )  {
-      penalty <- rep(0,J)
+      penalty <- rep(penalty,J)
     } else {
       if( length(penalty) != J ) {
         stop("penalty is not of length 1 or J")

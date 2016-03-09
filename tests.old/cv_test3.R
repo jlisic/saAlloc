@@ -10,12 +10,13 @@ plotDir <- "~/src/saAllocDoc/plots"
 
 set.seed(400)
 
-Nh <- c(10,10,8)*100
+Nh <- c(10,10,8)*1
 K  <- 2 
 R  <- 1 
 
 H <- length(Nh)
-sampleSize <- rep(20,H)
+#sampleSize <- rep(20,H)
+sampleSize <- rep(5,H)
 
 # center
 centers <- 
@@ -65,7 +66,7 @@ strata <- init.kmeans$cluster - 1
 probMatrix <- matrix( 1/H, nrow=sum(Nh) ,ncol=H)
 
 
-penalty  <- rep(100,K) 
+penalty  <- rep(10000,K) 
 #expectedVar <- sqrt(   sum( ( (1:H)^2 + 100) * (Nh^2/sampleSize)  )  ) / (100 * sum(Nh)) 
 #targetCV <- rep(expectedVar,K)
 targetCV <- c( 0.02, 1 )
@@ -75,14 +76,15 @@ print( "kmeans")
 print( saAlloc:::.cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE) )
 
 
-if ( F ) {
+if ( T ) {
+  set.seed(400)
 test <- saSampleAlloc( 
   x,
   label=strata,
   targetCV=targetCV,
   sampleSize=sampleSize,
-  sampleSizeIterations=10000,
-  penalty=penalty            # negative penalties are ignored
+  sampleSizeIterations=10,
+  penalty=c(100,100)            # negative penalties are ignored
   ) 
 
 print( saAlloc:::.cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE))
@@ -90,7 +92,7 @@ print( saAlloc:::.cv2( x, strata=strata, sampleSize=sampleSize, average=TRUE))
 
 
 
-iterations <- 1000000
+iterations <- 100000
 #iterations <- 1000
 #iterations <- 225
 #iterations <- 10
@@ -100,6 +102,20 @@ iterations <- 1000000
 #scaleAdjustment <- sqrt(x)
 p <- 2
 
+# get probability
+library(FNN)
+knn.value <- 100
+w.index <- knn.index(x,knn.value)
+w <- apply(w.index, 1, function(x) {
+    out <- rep(0,3) 
+    x.table <- table( test$label[x] )  # not a good idea, but works for now
+    out[as.integer(names(x.table)) + 1]  <- x.table
+    return(out)
+  } )
+
+w <- t(w)
+#w <- (w + 1) / 13
+w <- w / knn.value 
 
 
 # cost change
@@ -109,26 +125,34 @@ p <- 2
 # 3: move from
 # 4: 
 
-colnames(x) <- c('x','y')
+#set.seed(500)
+#strata2 <- sapply(1:nrow(x),function(x) sample(0:2,1))
+#sampleSize2 <- rep(20,3)
 
-set.seed(100)
+colnames(x) <- c('x','y')
+sampleSize2 <- test$sampleSize
+names(sampleSize2) <- NULL
+
 test2 <- saMinCV( 
   x,
-  label=strata,
+  label=test$label,
+  #label=strata2,
   iterations=iterations,
   targetCV=targetCV,
-  sampleSize=sampleSize,
+  sampleSize=sampleSize2,
   weightMatrix=probMatrix,            # missing handled
-  sampleSizeIterations=3,
+  #weightMatrix=w,            # missing handled
+  sampleSizeIterations=1,
   penalty=penalty,            # negative penalties are ignored
-  cooling=0,
+  cooling=10,
   #locationAdjustment=locationAdjustment,
   #scaleAdjustment=scaleAdjustment,
   preserveSatisfied=TRUE
   ) 
 
-
+png(filename='/Users/jonathanlisic/src/saAllocDoc/plots/trace2.png')
 plot(test2)
+dev.off()
 
 print(summary(test2))
 
@@ -138,7 +162,7 @@ print(summary(test2))
 ##################################################################################
 
 
-
+strata3 <- (x[,1] < 20) + (x[,1] < 43) 
 
 
 
@@ -233,9 +257,9 @@ if ( F ) {
 # initial
 df <- data.frame( (y[,1:2]) )
 colnames(df) <- c('x','y')
-df$Stratum <- as.factor(strata)
+df$Stratum <- as.factor(test$label)
 
-png(filename=sprintf("%s/init.png",plotDir))
+png(filename=sprintf("%s/init2.png",plotDir))
 print( ggplot(df, aes(x=x,y=y,color=Stratum),size=1.5) + geom_point())
 dev.off()
 
@@ -244,7 +268,7 @@ df <- data.frame( (y[,1:2]) )
 colnames(df) <- c('x','y')
 df$Stratum <- as.factor(test2$label)
 
-png(filename=sprintf("%s/final.png",plotDir))
+png(filename=sprintf("%s/final2.png",plotDir))
 print( ggplot(df, aes(x=x,y=y,color=Stratum),size=1.5) + geom_point())
 dev.off()
 

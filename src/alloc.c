@@ -104,8 +104,8 @@ void alloc_sampleSizeChange (
   double * test_nh = calloc( H, sizeof(double) );  // a place to store changes
   size_t i,h,j;         // iteration
   double minSampleSize = 2.0; // minimum sample size
-  double min_delta, delta;
-  size_t Hi, Hj, optHj;
+  double delta;
+  size_t Hi, Hj;
 
   /* sanity check */
   double nhSumStart;
@@ -125,109 +125,90 @@ void alloc_sampleSizeChange (
   
   // iterate a fixed number of times 
   for( i = 0 ; i < iter; i++ ) {
-    
+
     // 1.0 randomly select a strata to move from 
     Hi = SA_GETINDEX(H);
-    optHj = H;
 
 
     // only proceed if stratum Hi can be made smaller 
-    if( test_nh[Hi] < minSampleSize + 1 ) {
+    if( nh[Hi] < minSampleSize + 1 ) {
+      a[i] = nan(NULL);
       continue;
     }
     
-    test_nh[Hi] -= 1.0; // perform first iteration
       
     // 2.0 calculate objective function change for moving to each strata 
-    min_delta = 0.0;
-
-    for( Hj = 0; Hj < H; Hj++ ) {
+    Hj = SA_GETINDEX(H);
  
-      // if the exchange would make the sample size too big, we don't do it 
-      if( test_nh[Hj] + 1 > Nh[Hj] ) {
+    // if the exchange would make the sample size too big, we don't do it 
+    if( nh[Hj] + 1 > Nh[Hj] ) {
+      a[i] = nan(NULL);
+      continue; 
+    }
 
-        continue;
-      }
 
-      // do not run over the selected state 
-      if( Hj != Hi) {
+    // if they match don't evaluate
+    if( Hj != Hi) {
         
-        test_nh[Hj] += 1.0;
+      test_nh[Hi] -= 1.0; // decrement stratum Hi 
+      test_nh[Hj] += 1.0; // increment stratum Hj
       
-//        printf("test = %f\n", var[0][0][0]);
-        /* calculate cv and write it to cv */ 
-        // gcc is crazy and likes to delete this bit
-        //void __attribute__((optimize("O0"))) foo(unsigned char data) {
         
-        delta = cv_objectiveFunctionCompare( 
-          cv, 
-          cvInit, 
-          NULL,
-          NULL,
-          N, 
-          K, 
-          H, 
-          R, 
-          J, 
-          Domain, 
-          var, 
-          Nh, 
-          test_nh, 
-          Total, 
-          locationAdj, 
-          scaleAdj, 
-          Target, 
-          penalty, 
-          p, 
-          0, 
-          preserveSatisfied); 
+      delta = cv_objectiveFunctionCompare( 
+        cv, 
+        cvInit, 
+        NULL,
+        NULL,
+        N, 
+        K, 
+        H, 
+        R, 
+        J, 
+        Domain, 
+        var, 
+        Nh, 
+        test_nh, 
+        Total, 
+        locationAdj, 
+        scaleAdj, 
+        Target, 
+        penalty, 
+        p, 
+        0, 
+        preserveSatisfied
+      ); 
 
-        //}
-
-        /*
-        printf("%d delta = %f\n",(int) i, delta);
-        printf("cv:  ");
-        for(j = 0; j < J; j++) printf("%f,", cv[j]); 
-        printf("\n");
-        printf("cv - init:  ");
-        for(j = 0; j < J; j++) printf("%f,", cvInit[j]); 
-        printf("\n");
-          
-        //delta = 1;
-        */ 
         
-        test_nh[Hj] -= 1.0;
 
-        //printf("%d, %f\n", (int) i, delta);
-
-        // check if we are doing better 
-        if( delta <= min_delta ) {
-          optHj = Hj;
-          min_delta = delta;
-          for(j = 0; j < J; j++) cvInit[j] = cv[j]; 
-        } 
+      if( delta <= 0 ) { 
+        // update the cv and strata assignment
+        for(j = 0; j < J; j++) cvInit[j] = cv[j]; 
+        nh[Hi] = test_nh[Hi];
+        nh[Hj] = test_nh[Hj];
+      } else {
+        // change back
+        test_nh[Hi] = nh[Hi];
+        test_nh[Hj] = nh[Hj];
       }
+      
+      // cover the Hj == Hi case
+    } else {
+      delta = 0;
     }
     
-    // 3.0 if there are reductions in objective function make a move to minimize CV 
-  
-    if( optHj < H ) {  // check if the final result minimized the objective function for all H 
-      test_nh[optHj] += 1.0;
-    } else {
-      test_nh[Hi] += 1.0; // undo our change 
-    }
 
    // sanity check 
-    for(h = 0, nhSumStop = 0; h < H; h++) nhSumStop += test_nh[h]; 
-    if( nhSumStop != nhSumStart ) printf("alloc: nhSumStop = %f , nhSumStart = %f\n", nhSumStop, nhSumStart);
+    for(h = 0, nhSumStop = 0; h < H; h++) nhSumStop += nh[h]; 
+    if( nhSumStop != nhSumStart ) Rprintf("alloc: nhSumStop = %f , nhSumStart = %f\n", nhSumStop, nhSumStart);
 
+    // r
     // return min_delta
-    if( a != NULL ) a[i] = min_delta;
+    if( a != NULL ) a[i] = delta;
   }
     
 
   // copy values over
-  for(h = 0; h < H; h++) nh[h] = test_nh[h]; 
+  //for(h = 0; h < H; h++) nh[h] = test_nh[h]; 
   free(test_nh);
   free(cv);
 
@@ -529,6 +510,9 @@ void R_sampleAlloc (
   Rprintf("nh - final\n");
   printMDA( (void *) nh, MDA_DOUBLE, 1, H); 
 
+  
+  Rprintf("Penalty\n");
+  printMDA( (void *) penalty, MDA_DOUBLE, 1, J); 
 
   // clean up 
   Rprintf(" Deleteing Mean\n");

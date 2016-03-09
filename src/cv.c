@@ -41,7 +41,7 @@ double *** cv_createMeanMatrix(
 
   /* note that the first K entries in the domain are the commodities */
 
-  #pragma omp for private(k,r,j,h) 
+//  #pragma omp for private(k,r,j,h) 
   for(i = 0; i < xN; i++ ) { 
 
      k = i / (N*R); /* commodity index */
@@ -51,7 +51,7 @@ double *** cv_createMeanMatrix(
 
      h = I[j];       /* stratum */
 
-     #pragma omp atomic
+//     #pragma omp atomic
      mu[k][h][r] += x[i] / (double) Nh[h];  
   }
   
@@ -84,7 +84,7 @@ double *** cv_createVarMatrix(
 
   size_t xN = N * R * K;
   
-  #pragma omp for private(k,r,j,h) 
+//  #pragma omp for private(k,r,j,h) 
   for(i = 0; i < xN; i++ ) { 
 
      k = i / (N*R); /* commodity index */
@@ -95,7 +95,7 @@ double *** cv_createVarMatrix(
 
      h = I[j];       /* stratum */
 
-     #pragma omp atomic
+//     #pragma omp atomic
      V[k][h][r] += 
         (x[i] - mu[k][h][r]) * (x[i] - mu[k][h][r]) / ( (double) (Nh[h] - 1) ); 
   }
@@ -581,7 +581,7 @@ double cv_objectiveFunctionCompare(
     }
     
     // apply the penalty function 
-    if( (deltaPrior < 0) | (penalty == NULL) | (Target == NULL) ) {
+    if( (deltaPrior <= 0) | (penalty == NULL) | (Target == NULL) ) {
       resultPrior+= pow(cvPrior[j], p); 
 //      printf("[%4.12f] ", pow(cvPrior[j], p) ); 
     } else {
@@ -590,12 +590,12 @@ double cv_objectiveFunctionCompare(
     }
  
     // apply the penalty function 
-    if( (delta < 0) | (penalty == NULL) | (Target == NULL) ) {
+    if( (delta <= 0) | (penalty == NULL) | (Target == NULL) ) {
       result+= pow(cv[j], p); 
 //      printf("%4.12f ", pow(cv[j], p) ); 
     } else {
       result+= pow(delta, p) * penalty[j] + pow(cv[j],p); 
-//      printf("%4.12f ", pow(delta, p) * penalty[j] + pow(cv[j],p) ); 
+       //printf("%4.12f (%4.12f) ", pow(delta, p) * penalty[j] + pow(cv[j],p) ); 
     }
   }
 
