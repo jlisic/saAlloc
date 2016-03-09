@@ -13,8 +13,8 @@ distance between stratum sizes are supported.
 \tabular{ll}{
 Package: \tab saAlloc\cr
 Type: \tab Package\cr
-Version: \tab 1.0\cr
-Date: \tab 2014-07-28\cr
+Version: \tab 1.1\cr
+Date: \tab 2016-03-09\cr
 License: \tab Public Domain\cr
 }
  
