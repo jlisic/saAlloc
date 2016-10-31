@@ -32,10 +32,10 @@ function(
 
 
   # CHECK FOR VIOLATION OF TOLSIZE
-  checkAcres <- aggregate(PSUAcres,by=list(rlabel),sum)$x
+  checkAcres <- stats::aggregate(PSUAcres,by=list(rlabel),sum)$x
   if( 1 - min(checkAcres) / max(checkAcres) > tolSize ) { 
-    print("Initial Acreages Assumptions violated")
-    print("Returning NULL")
+    print("Initial acreages assumptions violated,")
+    print("returning NULL")
     return(NULL)
   }
   

@@ -1,7 +1,9 @@
 useDynLib(saAlloc)
-export(saAlloc)
 export(saEqualClus)
 export(saMinCV)
 export(saSampleAlloc)
 export(plot.saAlloc)
 export(summary.saAlloc)
+
+S3method(summary,saAlloc)
+S3method(print,saAlloc)

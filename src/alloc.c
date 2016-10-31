@@ -117,8 +117,6 @@ void alloc_sampleSizeChange (
   // if there is nothing to do, do nothing 
   if( iter == 0) return;
  
-  //for(h = 0; h < H; h++) nhSumStart += nh[h]; 
-
   // copy values over
   for(h = 0; h < H; h++) test_nh[h] = nh[h]; 
   
@@ -398,7 +396,8 @@ void R_sampleAlloc (
   double * pDouble,
   double * penalty, 
   double * nh,      /* sample size by stratum */
-  double * a
+  double * a,
+  double * cooling
 ) {              
 
   size_t N = *NInt;

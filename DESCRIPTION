@@ -1,9 +1,12 @@
 Package: saAlloc
 Type: Package
-Title: Stratification and Allocation of Sampling Units Using Simulated Annealing 
-Version: 0.21
-Date: 2015-04-10
+Title: Optimal Allocation of Sampling Units to Form Strata Using Simulated Annealing 
+Version: 1.1
+Date: 2016-30-31
 Author: Jonathan Lisic <jonathan.lisic@nass.usda.gov> 
 Maintainer: Jonathan Lisic <jonathan.lisic@nass.usda.gov> 
-Description: This program performs sampling strata formation under a variety of scenarios using simulated annealing.  
+Description: A suite of tools to perform joint optimal allocation and stratification
+  of sampling units using simulated annealing.  Soft and hard constraints placed on 
+  the coefficient of variances (CV) of administrative variables are supported.
+Depends: R (>= 2.15.0)
 License: Unlimited 

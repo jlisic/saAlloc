@@ -46,6 +46,7 @@ void cv_size_tMatrixPrint(size_t ** X , size_t m, size_t n ) {
   return;
 }
 
+
 /* function that deletes a matrix of type int */
 int ** cv_intMatrixCreate( size_t m, size_t n) {
   size_t i,j;

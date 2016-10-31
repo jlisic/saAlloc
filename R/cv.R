@@ -14,13 +14,13 @@
   # get variance
   if(k > 1) {
     vars <- 
-      aggregate( 
+      stats::aggregate( 
         x,
         by= list( rep(strata,each=k), rep(1:k,length(strata))),
-        var
+        stats::var
       )
     
-    vars <- aggregate( 
+    vars <- stats::aggregate( 
               vars[,-c(1,2),drop=FALSE], 
               by=list(vars$Group.1), 
               mean)[,-1]
@@ -28,7 +28,7 @@
 
   } else {
     # get variance
-    vars <- aggregate( x,by=list(strata), var)[,-1]
+    vars <- stats::aggregate( x,by=list(strata), stats::var)[,-1]
   }
  
   # get number of strata
@@ -43,7 +43,7 @@
    
   # get total
   totals <- colSums( x ) /k
-  Nh <- aggregate( strata,by=list(strata), length)[,-1]
+  Nh <- stats::aggregate( strata,by=list(strata), length)[,-1]
 
 
   return(sqrt(colSums(vars * Nh^2/sampleSize)) / totals )
@@ -63,16 +63,16 @@
   }
 
   vars <- 
-    aggregate( 
+    stats::aggregate( 
       x,
       by= list( rep(strata,each=R), rep(1:R,length(strata))),
-      var
+      stats::var
     )[,c(-1,-2)]
 
   # perform scale adjustment on S^2 
   if( !missing(scaleAdjustment) ) {
     scaleAdjustment <- 
-    aggregate( 
+    stats::aggregate( 
       scaleAdjustment,
       by= list( rep(strata,each=R), rep(1:R,length(strata))),
       mean 
@@ -85,7 +85,7 @@
       list( rep(strata,each=R), rep(1:R,length(strata)))
 
     locationAdjustment <- 
-    aggregate( 
+    stats::aggregate( 
       locationAdjustment,
       by= list( rep(strata,each=R), rep(1:R,length(strata))),
       mean 
@@ -102,12 +102,12 @@
   }
  
   # get total
-  totals <- aggregate(x, by=list(rep(1:R,length(strata))),sum)[,-1] 
-  Nh <- aggregate( strata,by=list(strata), length)[,-1]
+  totals <- stats::aggregate(x, by=list(rep(1:R,length(strata))),sum)[,-1] 
+  Nh <- stats::aggregate( strata,by=list(strata), length)[,-1]
 
   varsAdj <- vars*(Nh^2/sampleSize)
 
-  result <- sqrt( aggregate( varsAdj , by=list(rep(1:R,each=H)), sum)[,-1])  
+  result <- sqrt( stats::aggregate( varsAdj , by=list(rep(1:R,each=H)), sum)[,-1])  
 
 
   return( colMeans( result / totals ) )

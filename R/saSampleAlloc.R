@@ -6,12 +6,13 @@ function(
   targetCV,
   sampleSize,
   weightMatrix,            # missing handled
-  domainMatrix,
+  domainMatrixList,
   locationAdjustment,
   scaleAdjustment,
   sampleSizeIterations=100,
   p = 2,                   # l2 norm of the penalty function
   penalty = -1,            # negative penalties are ignored
+  cooling = 0,
   preserveSatisfied=TRUE
   ) {
 
@@ -41,7 +42,9 @@ function(
   H <- length(unique.label)    # number of strata
 
   #################### PROBABILITY ######################################
- 
+
+
+
   # get prob
   if( missing(weightMatrix) ) {
     weightMatrix <- matrix( 1/N, nrow=N, ncol=H)
@@ -61,6 +64,12 @@ function(
   # create row major matrix for input to C program
   weightMatrix <- c(t(weightMatrix))
 
+  # get colnames for x 
+  if( is.null(colnames(x)) ) {
+    x.colnames <- sprintf("%d",1:K)
+  } else {
+   x.colnames <- colnames(x)
+  }
 
   #################### LOCATION ADJUSTMENT ######################################
  
@@ -89,17 +98,19 @@ function(
   # and H is the number of strata
   # if it is missing this list will be substituted with a list of identity matricies.
 
-  if( missing( domainMatrix) ) {
+  if( missing(domainMatrixList) ) {
     J <- K
+    domainMatrixList.names <- x.colnames
     domainMatrix <- rep(c(diag(K)),H)
   } else {
-    J <- ncol(domainMatrix[[1]])
+    domainMatrixList.names <- names(domainMatrixList) 
+    J <- ncol(domainMatrixList[[1]])
     if( J < K) stop("Error J < K")
     if( J == K) {
       domainMatrix <- rep(c(diag(K)),H)
     } else {
       domainMatrixTmp <- c()
-      for( h in 1:H ) domainMatrixTmp <- c(domainMatrixTmp, c( t(domainMatrix[h]) ))
+      for( h in 1:H ) domainMatrixTmp <- c(domainMatrixTmp, c( t(domainMatrixList[[h]]) ))
       domainMatrix <- domainMatrixTmp 
     }
 
@@ -211,7 +222,8 @@ r.result <- .C("R_sampleAlloc",
   as.double(p),                     # 14
   as.double(penalty),               # 15
   as.double(sampleSize),            # 16
-  as.double(a)                      # 17
+  as.double(a),                     # 17
+  as.double(cooling)                # 18
 )
 
 runTime <- proc.time() - Cprog
@@ -219,12 +231,6 @@ runTime <- proc.time() - Cprog
 
   #################### RETURN DATA ######################################
 
-  # get colnames for x 
-  if( is.null(colnames(x)) ) {
-    x.colnames <- sprintf("%d",1:K)
-  } else {
-   x.colnames <- colnames(x)
-  }
 
   ## label
   newRlabel <- sapply(unlist(r.result[8]), function(x) unique.label[x+1] ) 
@@ -239,11 +245,11 @@ runTime <- proc.time() - Cprog
   CV      <- .cv( x, newRlabel, newSampleSize, average=TRUE) 
 
   ## strata Size
-  strataSizeStart <- aggregate(rlabel, by=list(rlabel), length)
+  strataSizeStart <- stats::aggregate(rlabel, by=list(rlabel), length)
   rownames(strataSizeStart) <- strataSizeStart$Group.1
   strataSizeStart <- strataSizeStart[,2,drop=FALSE] 
 
-  strataSize      <- aggregate(newRlabel, by=list(newRlabel), length)
+  strataSize      <- stats::aggregate(newRlabel, by=list(newRlabel), length)
   rownames(strataSize) <- strataSize$Group.1
   strataSize <- strataSize[,2,drop=FALSE] 
 

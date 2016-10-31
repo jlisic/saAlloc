@@ -14,7 +14,7 @@ plot.saAlloc <- function( x, together=TRUE, ... ) {
   if(!together ) {
     plotRow <-  ceiling(sqrt(length(variables)))
     plotCol <-  ceiling(length(variables) / plotRow)
-    par(mfrow= c(plotRow,plotCol) )
+    graphics::par(mfrow= c(plotRow,plotCol) )
   }
 
 
@@ -37,7 +37,7 @@ for( i in 1:iterations ) {
 }
 
 
-print("getting changes")
+# print("getting changes")
 #  # get changes 
 #  for( i in 1:iterations )  {
 #    if( i == 1) {  
@@ -54,10 +54,10 @@ print("getting changes")
 #      }
 #    }
 #  }
-print("done getting changes")
+# print("done getting changes")
 
   # plot first variable 
-  plot(
+  graphics::plot(
     0:(iterations-1),
     accept[changed,variables[1]],
     type='l', 
@@ -69,9 +69,9 @@ print("done getting changes")
 
   # add title
   if(together) {
-    title("Trace of CVs")
+    graphics::title("Trace of CVs")
   } else {
-    title(sprintf("Trace of CV for %s",variables[1]))
+    graphics::title(sprintf("Trace of CV for %s",variables[1]))
   }
 
   # plot other variables 
@@ -79,7 +79,7 @@ print("done getting changes")
 
     if( together ) {
       for( i in 2:length(variables) ) {
-        points(
+        graphics::points(
             0:(iterations-1),
             accept[changed ,variables[i] ],
             type='l',
@@ -88,7 +88,7 @@ print("done getting changes")
       }
     } else {
       for( i in 2:length(variables) ) {
-        plot(
+        graphics::plot(
           0:(iterations-1),
           accept[changed,variables[i] ],
           type='l',
@@ -96,14 +96,14 @@ print("done getting changes")
           xlab='Iterations',
           ylab='CV'
         )
-        title(sprintf("Trace of CV for %s",variables[i]))
+        graphics::title(sprintf("Trace of CV for %s",variables[i]))
       }
     }
   }
 
   # add legend
   if( together ) {
-    legend( 
+    graphics::legend( 
       "topright",
       variables,                     # add names
       lty=rep(1,length(variables)),  # add lines

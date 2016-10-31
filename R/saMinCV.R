@@ -24,12 +24,6 @@ saMinCV <- function(
     stop("x must be a matrix") 
   }
  
-  # get colnames for x 
-  if( is.null(colnames(x)) ) {
-    x.colnames <- sprintf("%d",1:K)
-  } else {
-    x.colnames <- colnames(x)
-  }
 
   Cprog <- proc.time()
   
@@ -42,10 +36,16 @@ saMinCV <- function(
   # get rows etc... 
   N <- length(label)            # number of observations
   K <- ncol(x)                  # number of distinct characteristics  (independent subsets of the covariance matrix)
-  R <- length(c(x)) / (N * K)  # dimension of each of the distinct characteristics 
+  R <- length(c(x)) / (N * K)   # dimension of each of the distinct characteristics 
                                 # (dependent members of the subsets of the covariance matrix)
-  H <- length(unique.label)    # number of strata
-
+  H <- length(unique.label)     # number of strata
+  
+  # get colnames for x 
+  if( is.null(colnames(x)) ) {
+    x.colnames <- sprintf("%d",1:K)
+  } else {
+    x.colnames <- colnames(x)
+  }
   
   #################### PROBABILITY ######################################
  
@@ -250,8 +250,6 @@ saMinCV <- function(
 
   #################### RETURN DATA ######################################
 
-  debug.label <<- r.result[8]
-
   ## change and other accept data
   a <- matrix(unlist(r.result[18]),ncol=costChangeSize ,byrow=T)
   colnames(a) <- c( 'change', 'U', 'T','selected','from','to', 
@@ -276,29 +274,29 @@ saMinCV <- function(
   ## final and initial CVs
   if( missing(locationAdjustment) & missing(scaleAdjustment) ) { 
     print("no adjustment")
-    CVStart  <- saAlloc:::.cv2( x, rlabel, sampleSize, average=TRUE)
-    CV  <- saAlloc:::.cv2( x, newRlabel, newSampleSize, average=TRUE )
+    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE )
   } else if( missing(locationAdjustment) )  { 
     print("just scale adjustment")
-    CVStart  <- saAlloc:::.cv2( x, rlabel, sampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
-    CV  <- saAlloc:::.cv2( x, newRlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
+    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
   } else if( missing(scaleAdjustment) )  { 
     print("just location adjustment")
-    CVStart  <- saAlloc:::.cv2( x, rlabel, sampleSize, average=TRUE, locationAdjustment=locationAdjustment)
-    CV  <- saAlloc:::.cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment)
+    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, locationAdjustment=locationAdjustment)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment)
   } else {
     print("both adjustments")
-    CVStart  <- saAlloc:::.cv2( x, rlabel, sampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
-    CV  <- saAlloc:::.cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
+    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
   }
 
 
   ## strata Size
-  strataSizeStart <- aggregate(rlabel, by=list(rlabel), length)
+  strataSizeStart <- stats::aggregate(rlabel, by=list(rlabel), length)
   rownames(strataSizeStart) <- strataSizeStart$Group.1
   strataSizeStart <- strataSizeStart[,2,drop=FALSE] 
 
-  strataSize      <- aggregate(newRlabel, by=list(newRlabel), length)
+  strataSize      <- stats::aggregate(newRlabel, by=list(newRlabel), length)
   rownames(strataSize) <- strataSize$Group.1
   strataSize <- strataSize[,2,drop=FALSE] 
 

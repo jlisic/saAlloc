@@ -2,13 +2,13 @@
 \alias{saMinCV}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Minimum CV Strata Formation and Allocation via Simulated Annealing
+Optimal Strata Formation and Allocation Using Simulated Annealing
 }
 \description{
-This function exchanges sampling units between strata to minimzie the target CV,
-every few steps (as determined by sampleUpdateIterations) a number of 
-iterations are performed to improve the target CV by changing the sample 
-allocation.
+This function exchanges sampling units between strata to minimize the target 
+coefficient of variation (CV), every few steps (as determined by 
+\code{sampleUpdateIterations}) a number of iterations are performed to improve 
+the target CV by changing the sample allocation.
 }
 \usage{
 saMinCV(
@@ -67,8 +67,8 @@ saMinCV(
   strata, or a sample size for each strata.
   }
   \item{weightMatrix}{
-  matrix of size nrow(x) by total strata, the higher the weight for a PSU for 
-  a particular strata relative to the PSU's other strata weight the more likely
+  matrix of size \code{nrow(x)} by total strata, the higher the weight for a PSU for 
+  a particular strata relative to the PSUs other strata weight the more likely
   it is to be moved to that strata. 
   }
   \item{domainMatrixList}{
@@ -86,19 +86,19 @@ saMinCV(
   (0 = every iteration).
   }
   \item{locationAdjustment}{
-  A constant value added to S^2 for each replicate, this is of the same
-  size and layout of x.  
+  A constant value added to the population variable for each administrative variable, 
+  this is of the same size and layout of x.  
   }
   \item{scaleAdjustment}{
-  A constant value multiplied by S^2 (before the location adjustment)  for each 
-  replicate, this is of the same size and layout of x.  
+  A constant value multiplied by the population variable (before the location adjustment) 
+  for each administrative variable, this is of the same size and layout of x.  
   }
   \item{penalty}{
-  The  penalty vector used for each of the J penalties, penalties with negative
+  The penalty vector used for each of the J penalties.  Penalties with negative
   elements are ignored.  A scalar value may be used, and will be repeated for all CVs. 
   }
   \item{p}{
-  The exponent for the penalty fuction, fractional exponents are available.
+  The exponent for the penalty function, fractional exponents are available.
   }
   \item{cooling}{
   Cooling Schedule (0 = exchange only)

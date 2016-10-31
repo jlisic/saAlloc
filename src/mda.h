@@ -75,6 +75,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include "R.h"
 
 
 #define MDA_SIZE_T 0 

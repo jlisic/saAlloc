@@ -6,9 +6,9 @@
 saAlloc Object 
 }
 \description{
-  The saAlloc object contains a set of results obtained by either by
-  forming optimal strata and allocations for fixed CV constraints and 
-  fixed total sample size (minCV) or without fixed sample size (saEqualClus). 
+  The saAlloc object contains a set of results obtained by either forming optimal 
+  strata and allocations for fixed CV constraints and fixed total sample size \code{minCV}
+  or without fixed sample size \code{saEqualClus}. 
 }
 \author{
   Jonathan Lisic

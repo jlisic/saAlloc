@@ -338,13 +338,6 @@ void minCV_diag(
   minCV_adminStructPtr packedStruct =  (minCV_adminStructPtr) A;
 
 
-  if( N < 30 ) {
-  Rprintf("I:\n");
-  for(h = 0; h < N; h++) Rprintf("[%d] %d\n", (int) h, (int) I[h] ); 
-  }
-
-
-  
   // H is the number of labels 
   size_t H = packedStruct->H;
   
@@ -856,7 +849,7 @@ void minCV_update (
   } 
     
   for(h = 0, nhSumStop = 0; h < H; h++) nhSumStop += a->nh[h]; 
-  if( nhSumStop != nhSumStart ) printf("update: nhSumStop = %f , nhSumStart = %f\n", nhSumStop, nhSumStart);
+  if( nhSumStop != nhSumStart ) Rprintf("update: nhSumStop = %f , nhSumStart = %f\n", nhSumStop, nhSumStart);
  
   return;
 }

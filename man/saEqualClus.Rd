@@ -2,11 +2,12 @@
 \alias{saEqualClus}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Optimal Equal Sized Strata Formation and Allocation via Simulated Annealing 
+Optimal Equal Sized Strata Formation and Allocation Using Simulated Annealing 
 }
 \description{
-This function minimizes the sample size for a fixed set of target variances by
-moving sampling units between strata.
+This function minimizes the sample size for a fixed set of strata by moving sampling
+units between strata.  Optimization is performed under coefficient of variance 
+constraints (CV) for known administrative variables.
 }
 \usage{
 saEqualClus(
@@ -46,8 +47,8 @@ saEqualClus(
 %%     ~~Describe \code{targetVar} here~~
 }
   \item{targetVarWithin}{
-  If prior clustering is performed and assumed constant across the population
-  then it can be handled here.
+  This parameter is used to account for within PSU variance.  It is a constant
+  value added to each member of the population.
   }
   \item{tolSize}{
     Acceptable difference between PSUacres.
@@ -77,7 +78,7 @@ label <- c(rep(0,50),rep(1,50))
 #target variance
 targetVar <- c(10000, 20000,30000, 40000) 
 
-# run equal clus
+# run equal cluster
 a <- saEqualClus(
   x,
   label,
