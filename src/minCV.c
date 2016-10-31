@@ -10,7 +10,6 @@ void minCV_init (
             size_t N               /* number of elements within a state       */
             ) { 
 
-  size_t i,j;
   minCV_adminStructPtr a;
 
   
@@ -19,7 +18,8 @@ void minCV_init (
   /* cast A back to somethine useable */
   a = (minCV_adminStructPtr) A; 
 
-    Q[0] <- 
+  
+    Q[0] = 
       cv_objectiveFunction( 
       a->cv,
       N,
@@ -39,6 +39,7 @@ void minCV_init (
       a->p,
       a->preserveSatisfied  
     );
+    
   
 
   return;
@@ -263,7 +264,7 @@ void minCV_delete( minCV_adminStructPtr A, size_t K, size_t N ) {
   size_t H = packedStruct->H;
   
   // R is the number of observations of each PSU 
-  size_t R = packedStruct->R;
+  // size_t R = packedStruct->R;
   
   // J is the number of domains 
   size_t J = packedStruct->J;
@@ -332,7 +333,7 @@ void minCV_diag(
             size_t N    /* number of elements within a state */
     ) {
 
-  size_t h = 0;
+  // size_t h = 0;
  
   // allocate struct 
   minCV_adminStructPtr packedStruct =  (minCV_adminStructPtr) A;
@@ -443,13 +444,13 @@ size_t minCV_randomState (
 
   /* cast A back to somethine useable */
   a = (minCV_adminStructPtr) A; 
-  double * nh = a->nh;
+  //double * nh = a->nh;
   size_t * Nh = a->Nh;
   size_t i =N+1;
   size_t H = a->H;
   size_t trys = 0;  /* number of times to try */
 
-  size_t h ;
+  //size_t h ;
 
 //  for(h=0;h<N;h++) printf("%4.2f ", a->prob[h] );
 //  printf("\n");
@@ -545,7 +546,7 @@ size_t minCV_getMoveStrata(
     size_t H
     ) {
 
-  size_t Hi = I[i];
+  //size_t Hi = I[i];
   double totalProb = 0;
   double total;
   size_t Hj;

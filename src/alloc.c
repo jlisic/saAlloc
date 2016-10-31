@@ -27,7 +27,6 @@ size_t alloc_getMoveStrata(
     size_t H
     ) {
 
-  size_t Hi = I[i];
   double totalProb = 0;
   double total;
   size_t Hj;
@@ -130,7 +129,7 @@ void alloc_sampleSizeChange (
 
     // only proceed if stratum Hi can be made smaller 
     if( nh[Hi] < minSampleSize + 1 ) {
-      a[i] = nan(NULL);
+      a[i] = nan("");
       continue;
     }
     
@@ -140,7 +139,7 @@ void alloc_sampleSizeChange (
  
     // if the exchange would make the sample size too big, we don't do it 
     if( nh[Hj] + 1 > Nh[Hj] ) {
-      a[i] = nan(NULL);
+      a[i] = nan("");
       continue; 
     }
 

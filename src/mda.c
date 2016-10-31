@@ -49,7 +49,7 @@ void cv_size_tMatrixPrint(size_t ** X , size_t m, size_t n ) {
 
 /* function that deletes a matrix of type int */
 int ** cv_intMatrixCreate( size_t m, size_t n) {
-  size_t i,j;
+  size_t i;
 
   int ** x = malloc(sizeof(int *) * m);
 
@@ -186,7 +186,7 @@ void cv_int3DMatrixPrint( int ***x, size_t m, size_t n, size_t p) {
 /* function to create double 3d matrix */
 double *** cv_double3DMatrixCreate( size_t m, size_t n, size_t p) {
 
-    size_t i,j,k;
+    size_t i,j;
 
       double *** x = malloc(sizeof(double **) * m);
 

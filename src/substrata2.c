@@ -709,13 +709,13 @@ double ** substrata2_createVarMatrix( size_t * label, size_t dN, size_t N, size_
 
   /* aggregate */
   for( i = 0; i < dN; i++)
-    for( j = 0; j < H; j++)
-    {
-    /* set initial sum to 0 */
-    V[i][j] = 0;
-    for( k = 0; k < Nh[j]; k++)
-      for( l = k+1; l < Nh[j]; l++) 
-        V[i][j] += getDist(L[j][k],L[j][l],D,i,N); 
+    for( j = 0; j < H; j++) {
+      /* set initial sum to 0 */
+      V[i][j] = 0;
+      for( k = 0; k < Nh[j]; k++)
+        for( l = k+1; l < Nh[j]; l++) 
+          V[i][j] += getDist(L[j][k],L[j][l],D,i,N); 
+
       V[i][j] = V[i][j] / ((NhSize[j] -1) * NhSize[j]);
     }
     
