@@ -17,14 +17,13 @@ saMinCV(
      targetCV, 
      sampleSize, 
      weightMatrix, 
-     domainMatrixList,
      iterations=1000, 
      sampleSizeIterations=3, 
      recalcIterations=10000,
      locationAdjustment,
      scaleAdjustment,
-     p = 2,                   # l2 norm of the penalty function
-     penalty = -1,            # negative penalties are ignored
+     p = 2,                   
+     penalty = -1,       
      cooling = 0,
      preserveSatisfied=TRUE
    )
@@ -33,49 +32,59 @@ saMinCV(
 \arguments{
   \item{x}{
   (Required) A matrix where each row is a sampling unit and each column is a 
-  characteristic of the sampling unit that is to be reduced in optimal sampling
-  size.  
+  characteristic of the sampling unit.    
 
   Multiple observations of the same PSU can be included by including additional
-  rows for each observation.
+  rows for each observation.  When data is presented in this manner, the 
+  average CV of each characteristic is used in the objective function.
  
   e.g. for 3 observations per PSU:
 
   PSU  Observation of PSU   .... data
+
   1    1
+
   1    2
+
   1    3
+
   2    1
+
   2    2
+
   2    3
+
   .    . 
-  .    .
+
   .    .
 
-  Note: that only x should be of this form for multiple observations, labels 
-  etc...  should be of the same size as if there was a single observation 
-  per PSU.
+  .    .
+
+  Note that only \code{x} should be of this form for multiple observations 
+  per PSU.  All other parameters should be of the same size as if there was 
+  a single observation per PSU.
   }
   \item{label}{
-  (Required) Initial stratum assignment.
+  (Required) Integer valued initial stratum assignment.
   }
   \item{targetCV}{
-  (Required) Target CV, must be equal to the columns of x
+  (Required) A vector of target CVs.  This vector must be of equal length 
+  to the number of columns of \code{x}. 
   }
   \item{sampleSize}{
-  (Required) sample size, either a scalar that will be equally split between
-  strata, or a sample size for each strata.
+  (Required) sample size, either an integer valued scalar that will be 
+  equally split between strata, or a sample size for each strata.  When 
+  the sample size cannot be split excess sample allocations will be given 
+  to strata in increasing order.
   }
   \item{weightMatrix}{
-  matrix of size \code{nrow(x)} by total strata, the higher the weight for a PSU for 
-  a particular strata relative to the PSUs other strata weight the more likely
-  it is to be moved to that strata. 
-  }
-  \item{domainMatrixList}{
-  a list of matricies of length H, where each matrix is of size K by J. 
+  A matrix of size \code{nrow(x)} by total strata.  PSUs with larger weights
+  are more likely to be selected in the simulated annealing procedure.
+  Acceleration of the procedure can be attained by using weights inversely
+  proportional to the distance to known strata boundaries.
   }
   \item{iterations}{
-  Number of iterations to perform of the Simulated Annealing procedure.
+  Number of iterations to perform of the simulated annealing procedure.
   }
   \item{sampleSizeIterations}{
   Number of iterations for each sample Allocation update step
@@ -86,26 +95,28 @@ saMinCV(
   (0 = every iteration).
   }
   \item{locationAdjustment}{
-  A constant value added to the population variable for each administrative variable, 
-  this is of the same size and layout of x.  
+  A constant value added to the population variable for each administrative 
+  variable, this is of the same size and layout of \code{x}.  
   }
   \item{scaleAdjustment}{
-  A constant value multiplied by the population variable (before the location adjustment) 
-  for each administrative variable, this is of the same size and layout of x.  
+  A constant value multiplied by the population variable (before the location 
+  adjustment) for each administrative variable, this is of the same size and 
+  layout of \code{x}.  
   }
   \item{penalty}{
-  The penalty vector used for each of the J penalties.  Penalties with negative
-  elements are ignored.  A scalar value may be used, and will be repeated for all CVs. 
+  The penalty vector used for each of the CV targets penalties.  Penalties 
+  with negative elements are ignored.  A scalar value may be used, and will 
+  be repeated for all CVs. 
   }
   \item{p}{
   The exponent for the penalty function, fractional exponents are available.
   }
   \item{cooling}{
-  Cooling Schedule (0 = exchange only)
+  Cooling Schedule (0 = exchange only).
   }
   \item{preserveSatisfied}{
-  TRUE implies that any constraint that is met for an accepted state is kept,
-  FALSE allows for met CVs to be violated by accepted states.
+  \code{TRUE} implies that any constraint that is met for an accepted state is kept,
+  \code{FALSE} allows for met CVs to be violated by accepted states.
  } 
  }
 \value{
@@ -146,3 +157,5 @@ b <- saMinCV(
 summary(b)
 
 }
+\keyword{ survey }
+

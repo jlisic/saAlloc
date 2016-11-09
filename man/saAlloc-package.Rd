@@ -22,8 +22,8 @@ saMinCV: uses an exchange algorithm with simulated annealing to form strata from
   set of sampling units and simultaneously updates the allocation at each iteration. 
 
 saEqualClus: allocates a set of sampling units to strata based on minimizing
-  total sample size based on a set of target variances (for fixed size strata 
-  only).
+  total sample size based on a set of target variances (for appromately equally sized
+  strata only).
   
 saSampleAlloc: uses simulated annealing to perform optimal allocation.
 

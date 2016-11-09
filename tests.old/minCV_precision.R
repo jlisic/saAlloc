@@ -1,6 +1,7 @@
 library(saAlloc)
 
 set.seed(400)
+iter <- 10
 
 # data set with 100 observations and 4 characteristics split between two strata
 
@@ -72,8 +73,8 @@ targetCV <- c(.00,.00,.00)
 b <- saMinCV(
   x,
   label,
-  iter=2000000,
-  cooling=0,
+  iter=iter,
+  #cooling=0,
   targetCV=targetCV,
   sampleSize=8
 )
@@ -85,15 +86,20 @@ label.cv <- label
 
 # init check data set
 check <- c()
+  
+
+test.cv <- saAlloc:::.cv2( x, strata=label.cv, sampleSize=accept[1,names(b$sampleSize)] )
+check <- rbind( check , c( accept[1,10:12], test.cv, accept[1,10:12] - test.cv) )
 
 # calculate the CV's from the changes in the labels directly
-for( i in 1:nrow(accept) ) { 
-  label.cv[ accept[i,'from'] ] <- accept[i,'to'] 
-  test.cv  <- saAlloc:::.cv( x, strata=label.cv, sampleSize=accept[i,names(b$sampleSize)] )
-
-  check <- rbind( check , c( accept[i,9:11], test.cv, accept[i,9:11] - test.cv) )
+if( iter > 1 ) {
+  for( i in 2:nrow(accept) ) { 
+    label.cv[ accept[i,'selected'] ] <- accept[i,'to'] 
+    test.cv  <- saAlloc:::.cv2( x, strata=label.cv, sampleSize=accept[i,names(b$sampleSize)] )
+  
+    check <- rbind( check , c( accept[i,10:12], test.cv, accept[i,10:12] - test.cv) )
+  }
 }
-
 print(check)
 
 

@@ -5,7 +5,7 @@ function(
   iterations=1000,
   cooling=0,
   segments=rep(1,nrow(x)),
-  PSUAcres=rep(1,nrow(x)),
+  controlVariable=rep(1,nrow(x)),
   targetVar,
   targetVarWithin=rep(0,ncol(x)),
   tolSize=0.05
@@ -25,14 +25,14 @@ function(
   acceptRate <- rep(0,5*iterations) 
   cost <- rep(1,d) 
 
-  adminDbl <- c( PSUAcres, targetVar, targetVarWithin, cooling, tolSize)
+  adminDbl <- c( controlVariable, targetVar, targetVarWithin, cooling, tolSize)
   adminDblLength <- length( adminDbl )
   adminInt <- c(segments) 
   adminIntLength <- length( adminInt )
 
 
   # CHECK FOR VIOLATION OF TOLSIZE
-  checkAcres <- stats::aggregate(PSUAcres,by=list(rlabel),sum)$x
+  checkAcres <- stats::aggregate(controlVariable,by=list(rlabel),sum)$x
   if( 1 - min(checkAcres) / max(checkAcres) > tolSize ) { 
     print("Initial acreages assumptions violated,")
     print("returning NULL")

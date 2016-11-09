@@ -129,7 +129,7 @@ void alloc_sampleSizeChange (
 
     // only proceed if stratum Hi can be made smaller 
     if( nh[Hi] < minSampleSize + 1 ) {
-      a[i] = nan("");
+      if(a != NULL) a[i] = nan("");
       continue;
     }
     
@@ -139,7 +139,7 @@ void alloc_sampleSizeChange (
  
     // if the exchange would make the sample size too big, we don't do it 
     if( nh[Hj] + 1 > Nh[Hj] ) {
-      a[i] = nan("");
+      if(a != NULL) a[i] = nan("");
       continue; 
     }
 

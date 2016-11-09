@@ -4,7 +4,7 @@ saMinCV <- function(
   targetCV,
   sampleSize,
   weightMatrix,            # missing handled
-  domainMatrixList,
+  #domainMatrixList,
   iterations=1000,
   sampleSizeIterations=3,
   recalcIterations=10000,
@@ -95,23 +95,23 @@ saMinCV <- function(
   # and H is the number of strata
   # if it is missing this list will be substituted with a list of identity matricies.
 
-  if( missing(domainMatrixList) ) {
+  #if( missing(domainMatrixList) ) {
     J <- K
     domainMatrixList.names <- x.colnames
     domainMatrix <- rep(c(diag(K)),H)
-  } else {
-    domainMatrixList.names <- names(domainMatrixList) 
-    J <- ncol(domainMatrixList[[1]])
-    if( J < K) stop("Error J < K")
-    if( J == K) {
-      domainMatrix <- rep(c(diag(K)),H)
-    } else {
-      domainMatrixTmp <- c()
-      for( h in 1:H ) domainMatrixTmp <- c(domainMatrixTmp, c( t(domainMatrixList[[h]]) ))
-      domainMatrix <- domainMatrixTmp 
-    }
-
-  }
+#  } else {
+#    domainMatrixList.names <- names(domainMatrixList) 
+#    J <- ncol(domainMatrixList[[1]])
+#    if( J < K) stop("Error J < K")
+#    if( J == K) {
+#      domainMatrix <- rep(c(diag(K)),H)
+#    } else {
+#      domainMatrixTmp <- c()
+#      for( h in 1:H ) domainMatrixTmp <- c(domainMatrixTmp, c( t(domainMatrixList[[h]]) ))
+#      domainMatrix <- domainMatrixTmp 
+#    }
+#
+#  }
 
   #################### PENALTY ######################################
 
@@ -139,7 +139,7 @@ saMinCV <- function(
       stop( "H != length(sampleSize)" )  
     # warning if there are no names 
     } else if( length(names(sampleSize)) == 0 ) {
-      warning( "sampleSize has no names, assuming that the sample sizes are in asscending order with respect to the strata in label." ) 
+      #warning( "sampleSize has no names, assuming that the sample sizes are in asscending order with respect to the strata in label." ) 
     # error if there are names but don't match what we find in unique.label
     } else if( !identical( sort(as.numeric(names(sampleSize))), unique.label)  ) {
       stop( "sampleSize names do match elements in label" ) 
@@ -194,7 +194,7 @@ saMinCV <- function(
     stop( "ncol(x) != length(targetCV)" )  
   # warning if there are no names 
   } else if( length(names(targetCV)) == 0 ) {
-    warning( "targetCV has no names, assuming that the targetCV are in the same order as x." ) 
+    #warning( "targetCV has no names, assuming that the targetCV are in the same order as x." ) 
   # error if there are names but don't match what we find in unique.label
   } else if( !identical( sort(names(targetCV)), sort(domainMatrixList.names))  ) {
     stop( "targetCV names do match column names of domainMatrix" ) 
