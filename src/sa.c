@@ -55,9 +55,9 @@ double * sa(
     // print status every 1000th 
     if( m > 1 ) { 
       if( m < 10000 ) {
-        Rprintf("Percent Complete: %4.2f\%\r", (float) (100*i)/m);
+        Rprintf("Percent Complete: %4.2f%%\r", (float) (100*i)/m);
       } else if( (1000 * i) % 65535 == 0 ) {
-        Rprintf("Percent Complete: %4.2f\%\r", (float) (100*i)/m);
+        Rprintf("Percent Complete: %4.2f%%\r", (float) (100*i)/m);
         //R_checkUserInterrupt();
       }
     }
@@ -122,7 +122,7 @@ double * sa(
   PutRNGstate();
   
 // output status   
-  Rprintf("Percent Complete: %d\%\n", (int) (i*100)/m  );
+  Rprintf("Percent Complete: %4.2f%%\n", (int) (i*100)/m  );
 
 
   return( costChange );
