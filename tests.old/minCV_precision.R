@@ -1,7 +1,7 @@
 library(saAlloc)
 
 set.seed(400)
-iter <- 10
+iter <- 1000
 
 # data set with 100 observations and 4 characteristics split between two strata
 
