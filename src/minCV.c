@@ -602,7 +602,6 @@ double minCV_costChange (
   double obj, candidate_obj;
 
 
-
   // apply the variance change 
   // note that we only update the cv if there is a change in strata 
   if( a->Hi != a->Hj ) 
@@ -635,6 +634,13 @@ double minCV_costChange (
       a->candidate_scaleAdj_mu
     ); 
 
+// write out current cv
+//printf("candidate CV\n");
+//for(j=0;j <J;j++) {
+//  printf("%d: cv=%f n_h=%d N_h=%d\n",(int) j, a->candidate_cv[j], (int) a->candidate_nh[j], (int) a->candidate_Nh[j] );
+//}
+
+
   // get change in allocation 
   alloc_sampleSizeChange(
       a->candidate_cv, 
@@ -662,8 +668,8 @@ double minCV_costChange (
   delta =  cv_objectiveFunctionCompare( 
     a->candidate_cv,         //if cv = NULL create it, otherwise handle in place 
     a->cv,   
-    &obj,
-    &candidate_obj,
+    &candidate_obj,   // prior 
+    &obj,             // candidate 
     N, K, H, R, J, 
     NULL,     // only used if evaluateOnly != 1
     NULL,        // only used if evaluateOnly != 1 
@@ -678,9 +684,18 @@ double minCV_costChange (
     1, // option to not construct CV, under this condition CV cannot be null 
     a->preserveSatisfied
   );
+
+  // write out current cv
+/*
+printf("CV\n");
+for(j=0;j <J;j++) {
+  printf("%d: cv=%f n_h=%d N_h=%d (candidate)\n",(int) j, a->candidate_cv[j], (int) a->candidate_nh[j], (int) a->candidate_Nh[j] );
+  printf("%d: cv=%f n_h=%d N_h=%d\n",(int) j, a->cv[j], (int) a->nh[j], (int) a->Nh[j] );
+}
+
     
-//  printf("obj: %f objPrior %f\n", obj, candidate_obj); 
-  
+ printf("obj: %f obj Candidate %f\n", obj, candidate_obj); 
+*/  
   return(delta);
 }
 

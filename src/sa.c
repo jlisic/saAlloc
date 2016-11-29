@@ -122,7 +122,7 @@ double * sa(
   PutRNGstate();
   
 // output status   
-  Rprintf("Percent Complete: %4.2f\n", (int) (i*100)/m  );
+  Rprintf("Percent Complete: %4.2f\n", (float) (i*100)/m  );
 
 
   return( costChange );

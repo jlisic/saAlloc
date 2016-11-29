@@ -7,7 +7,7 @@ Optimal Allocation of Sampling Units to Form Strata Using Simulated Annealing
 \description{
 A suite of tools to perform joint optimal allocation and stratification of sampling
 units using simulated annealing.  Soft and hard constraints placed on the coefficient 
-of variances (CV) of administrative variables are supported.
+of variances (CV) or variances of administrative variables are supported.
 }
 \details{
 \tabular{ll}{

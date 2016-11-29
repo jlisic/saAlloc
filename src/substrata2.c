@@ -30,7 +30,7 @@ void substrata2_init (
   for(i=0; i < dN; i++) {
     Q[i] = 0;
     for(j=0; j < H; j++) Q[i] += V[i][j];
-    Q[i] = ( Q[i] + W[i] ) / T[i];
+    Q[i] = ( Q[i] + W[i] )/T[i];
     
   }
 }
@@ -68,7 +68,7 @@ size_t substrata2_randomState (
   /* create some space to hold possible moves */
   possibleMoves = malloc(sizeof(size_t) * H); 
 
-  /* get minimum acres */
+  /* get the smallest strata total acres */
   minAcres = NhAcres[0];
   for( j = 0, minAcres = INFINITY;  j < H; j++)
     if( NhAcres[j] < minAcres ) { 
@@ -119,6 +119,8 @@ size_t substrata2_randomState (
   /* add to our data structure our next move */ 
   a->j = possibleMoves[SA_GETINDEX(k)];
 
+  Rprintf(" set Hj = %d, Hi = %d\n", (int) a->j, (int) I[i]);
+
   free(possibleMoves);
 
   return(i);
@@ -161,6 +163,14 @@ double substrata2_costChange (
   /* figure out change in cost */
   Hi = I[i]; 
 
+  Rprintf(" cost Hj = %d, Hi = %d\n", (int) a->j, (int) I[i]);
+
+  /*
+   *  sqrt( S^2_d )/x_d - T_d 
+   *  N_h^2/n_h S^2_d/x_d^2 - T_d^2 
+   *  S^2 - T_d^2/N_h^2
+   *
+   */
 
   /*this calculates psuedo nh's for each stratum*/
   for(d = 0; d < dN; d++) {
@@ -169,23 +179,23 @@ double substrata2_costChange (
     R[d] = 
       Q[d] 
       - 
-      (V[d][Hi] + V[d][Hj])/T[d] 
+      (V[d][Hi] + V[d][Hj])/T[d] // subtract off the values we are replacing, note that T[d] is the target var
       +
       (
         (V[d][Hj] + C[d][i][Hj]/(NhSize[Hj]*(NhSize[Hj] - 1))) * 
-          NhSize[Hj] * (NhSize[Hj] - 1) / ( (NhSize[Hj] + size[i]) * (NhSize[Hj] + size[i] - 1))
+          NhSize[Hj] * (NhSize[Hj] - 1) / ( (NhSize[Hj] + size[i]) * (NhSize[Hj] + size[i] - 1)) // add new cov bits plus size
         + 
         (V[d][Hi] - C[d][i][Hi]/(NhSize[Hi]*(NhSize[Hi] - 1))) *
-          NhSize[Hi] * (NhSize[Hi] - 1) / ( (NhSize[Hi] - size[i]) * (NhSize[Hi] - size[i] - 1))
+          NhSize[Hi] * (NhSize[Hi] - 1) / ( (NhSize[Hi] - size[i]) * (NhSize[Hi] - size[i] - 1)) // add new cov bits plus size
       )/T[d];
-
    }
+
    
   /* get the change in sample size */
   delta = 
-    R[substrata2_arrayMaxIndexDbl( R, dN )]
+    fabs(R[substrata2_arrayAbsMaxIndexDbl( R, dN )])
     -
-    Q[substrata2_arrayMaxIndexDbl( Q, dN )] ;
+    fabs(Q[substrata2_arrayAbsMaxIndexDbl( Q, dN )]);
   
     return(delta);
 }
@@ -206,20 +216,31 @@ void substrata2_update (
             double * costChange /* cost Change */
             ) { 
   
-  if( accept == 0) return;
-  
   /* cast A back to somethine useable */
   substrata2_adminStructPtr a = (substrata2_adminStructPtr) A; 
+  size_t k, d; 
+  size_t j  = a->j;
+ 
+  
+  if( accept == 0) return;
+  
  
   if( accept == 2) {
-    costChange[4] = a->j; /* add on what it is moving to */
+    costChange[4] = I[i]; /* add on where it is now */
+    costChange[5] = j; /* add on what it is moving to */
+    /* add on sample size */
+    for( d = 0; d < dN; d++) costChange[6+d] = R[d]; 
+  
+    /* update the strata assignment */
+    I[i] = j;
+
     return;
   }
-  
+ 
+  // temp distance value 
   double dik;
    
   /* map data from data structure */ 
-  size_t k, d; 
   double *** C = a->C;
   double ** V = a->V;
   size_t * Nh = a->Nh;
@@ -227,14 +248,11 @@ void substrata2_update (
   double * NhAcres = a->NhAcres;
   size_t * size = a->size;
   double * acres = a->acres;
-  size_t j  = a->j;
 
   /* figure out change in cost */
   size_t Hi = I[i];
   size_t Hj = j; 
   
-  /* update the strata assignment */
-  I[i] = Hj;
 
   if(Hi == Hj) return; 
 
@@ -612,14 +630,14 @@ size_t substrata2_arrayMaxSubstrata( size_t * a, size_t n, size_t *segments, siz
 
 
 /* quick function to determine the maximum valued index in an array */
-size_t substrata2_arrayMaxIndexDbl( double * a, size_t n ) {
+size_t substrata2_arrayAbsMaxIndexDbl( double * a, size_t n ) {
   size_t i, max;
 
 
   max = 0;
 
   for( i = 1; i < n; i++)
-    if( a[i] > a[max] ) max = i;
+    if( fabs(a[i]) > fabs(a[max]) ) max = i;
 
   return( max);
 }

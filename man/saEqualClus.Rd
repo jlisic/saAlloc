@@ -6,8 +6,8 @@ Optimal Equal Sized Strata Formation and Allocation Using Simulated Annealing
 }
 \description{
 This function minimizes the sample size for equally sized strata by exchanging
-sampling units between strata.  Optimization is performed under coefficient of 
-variance constraints (CV) for known administrative variables.
+sampling units between strata.  Optimization is performed under variance 
+constraints for known administrative variables.
 }
 \usage{
 saEqualClus(
@@ -18,7 +18,7 @@ saEqualClus(
       segments=rep(1,nrow(x)), 
       controlVariable=rep(1,nrow(x)), 
       targetVar, 
-      targetVarWithin=rep(0,ncol(x)), 
+      varWithin=rep(0,ncol(x)), 
       tolSize=0.05
     )
 }
@@ -49,9 +49,9 @@ saEqualClus(
   (Required) A vector of target variances for each administrative variable.  
   This vector must be of equal length to the number of columns of \code{x}. 
 }
-  \item{targetVarWithin}{
+  \item{varWithin}{
   This parameter is used to account for within PSU variance.  It is a constant
-  value added to each member of the population.
+  value added to the target variance and PSU variance at each iteration.
   }
   \item{tolSize}{
   Acceptable difference proportion between strata sums of the control variable.

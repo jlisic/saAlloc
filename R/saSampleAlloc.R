@@ -118,7 +118,7 @@ function(
 
   #################### PENALTY ######################################
 
-  if( sum( penalty < 0) > 1 ) {
+  if( sum( penalty < 0) >= 1 ) {
     penalty <- rep(0,J)
   } else {
 

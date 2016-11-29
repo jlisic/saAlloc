@@ -15,6 +15,7 @@ saAlloc Object
 \seealso{
   \code{\link{saMinCV}}
   \code{\link{saEqualClus}}
+  \code{\link{saSampleAlloc}}
 }
 \examples{
 

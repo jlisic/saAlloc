@@ -26,7 +26,7 @@ void R_substrata2 (
       int * dInt,      /* number of commodities                  1      */
       int * NInt,      /* number of individual items             1      */
       int * iterInt,   /* number of interations                  1      */
-      int * IInt,      /* destructive: init/final allocation     n      */
+      int * IInt,      /* destructive: init/final stratification n      */
       double * Q,      /* cost value of each commodity           d      */
       double * adminDataDbl,   /* Administrative data double             ANDbl  */
       int * adminDataInt,      /* Administrative data integer            ANInt  */

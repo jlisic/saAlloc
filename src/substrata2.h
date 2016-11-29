@@ -70,6 +70,7 @@ void * substrata2_packSubstrata(
 /* clean up for the substrata administrative data */
 void substrata2_deleteSubstrata( substrata2_adminStructPtr  a, size_t dN, size_t N );
 
+
 /* init function */
 void substrata2_init (
             size_t * I,            /* current state                           */
@@ -79,6 +80,7 @@ void substrata2_init (
             size_t dN,             /* number of distance matricies            */
             size_t N               /* number of elements within a state       */
             ); 
+
 
 /* cost change function */
 size_t substrata2_randomState (
@@ -92,6 +94,7 @@ size_t substrata2_randomState (
             size_t N               /* number of elements within a state       */
             );
 
+
 /* cost change function */
 double substrata2_costChange (
             size_t i,              /* new Index                               */
@@ -104,6 +107,7 @@ double substrata2_costChange (
             size_t dN,             /* number of distance matricies            */
             size_t N               /* number of elements within a state       */
             );
+
 
 /* update from change in i function */
 void substrata2_update (
@@ -119,7 +123,8 @@ void substrata2_update (
             size_t N,   /* number of elements within a state */
             double * costChange /* cost change */
             );
-    
+
+
 /* cooling schedule                                                           */
 double substrata2_cool ( 
             size_t iter,   /* iteration */
@@ -132,6 +137,7 @@ double substrata2_cool (
             size_t dN,   /* number of distance matricies */
             size_t N    /* number of elements within a state */
             );                      
+
 
 /* diagnostic print                                                           */
 void substrata2_diag( 
@@ -155,7 +161,7 @@ double * substrata2_labelTotalAcres ( size_t * label, size_t N, size_t H, double
 size_t substrata2_arrayMaxSize_t( size_t * a, size_t n ); 
 
 /* quick function to determine the maximum index in a double array */
-size_t substrata2_arrayMaxIndexDbl( double * a, size_t n ); 
+size_t substrata2_arrayAbsMaxIndexDbl( double * a, size_t n ); 
 
   /* this matrix identifies each item with all other items that can have labels assigned */
 size_t ** substrata2_labelCreateMaster( size_t * label, size_t N, size_t H, size_t NhMax );

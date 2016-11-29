@@ -8,30 +8,41 @@ summary.saAlloc <- function(object,...) {
   colnames(y) <-   c("Initial", "Final", "Target" ) 
   CVs <- data.frame(y, stringsAsFactors=FALSE) 
 
-  y <- cbind( object$sampleSizeStart, object$sampleSize ) 
-  colnames(y) <-   c("Initial", "Final") 
-  sampleSize <- data.frame(y, stringsAsFactors=FALSE)  
+  if( !is.null(object$sampleSizeStart) ) {
+    y <- cbind( object$sampleSizeStart, object$sampleSize ) 
+    colnames(y) <-   c("Initial", "Final") 
+    sampleSize <- data.frame(y, stringsAsFactors=FALSE)  
+  } else {
+    sampleSize <- NULL
+  }
 
   y <- cbind( object$strataSizeStart, object$strataSize ) 
   colnames(y) <- c("Initial", "Final" ) 
   strataSize <-  data.frame(y, stringsAsFactors=FALSE)  
 
 
-  if( !is.null(object$acres) ) { 
-    y <- cbind( object$acresStart, object$acres ) 
+  if( !is.null(object$control) ) { 
+    y <- cbind( object$controlStart, object$control ) 
     colnames(y) <- c("Initial", "Final" ) 
-    acres <-  data.frame(y, stringsAsFactors=FALSE)  
+    control <-  data.frame(y, stringsAsFactors=FALSE)  
   } else {
-    aces <- NULL
+    control <- NULL
   }
 
   runTime <- object$runTime
 
-  ans <- list( syscall=syscall, CVs=CVs, sampleSize=sampleSize, strataSize=strataSize, runTime=runTime ) 
+  ans <- list( 
+              syscall=syscall, 
+              CVs=CVs, 
+              sampleSize=sampleSize, 
+              strataSize=strataSize, 
+              runTime=runTime,
+              control=control ) 
   class(ans) <- "summary.saAlloc"
   ans
 
 }
+
 
 # print for s3 summary object
 print.summary.saAlloc <- function(x,...) {
@@ -45,19 +56,13 @@ print.summary.saAlloc <- function(x,...) {
   # print data
   print( x$CVs ) 
 
-  # print title
-  cat("\nSample Size:\n") 
-  # print data 
-  print( x$sampleSize )
+  if( !is.null(x$sampleSize) ) { 
+    cat("\nSample Size:\n") 
+    print( x$sampleSize )
+  }
 
   cat("\nStrata Size:\n")
   print( x$strataSize )
-
-
-  if( !is.null(x$acres) ) { 
-    cat("\nAuxiliary Size Constraint:\n")
-    print( x$acres ) 
-  }
 
   cat("\nRun Time:\n")
   print(x$runTime)

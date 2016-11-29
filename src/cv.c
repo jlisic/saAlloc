@@ -579,23 +579,25 @@ double cv_objectiveFunctionCompare(
           (preserveSatisfied == 1) 
         ) failFlag = 1; 
     }
-    
+
+//printf("  j = %d delta = %f, deltaPrior =%f\n", (int) j, delta, deltaPrior);
+
     // apply the penalty function 
     if( (deltaPrior <= 0) | (penalty == NULL) | (Target == NULL) ) {
       resultPrior+= pow(cvPrior[j], p); 
-//      printf("[%4.12f] ", pow(cvPrior[j], p) ); 
+//printf("[%4.12f] ", pow(cvPrior[j], p) ); 
     } else {
       resultPrior+= pow(deltaPrior, p) * penalty[j] + pow(cvPrior[j],p); 
-//      printf("[%4.12f] ", pow(deltaPrior, p) * penalty[j] + pow(cvPrior[j],p) ); 
+//printf("%f * %f + %f\n", pow(deltaPrior, p) , penalty[j] , pow(cvPrior[j],p) ); 
     }
  
     // apply the penalty function 
     if( (delta <= 0) | (penalty == NULL) | (Target == NULL) ) {
       result+= pow(cv[j], p); 
-//      printf("%4.12f ", pow(cv[j], p) ); 
+//printf("%4.12f ", pow(cv[j], p) ); 
     } else {
       result+= pow(delta, p) * penalty[j] + pow(cv[j],p); 
-       //printf("%4.12f (%4.12f) ", pow(delta, p) * penalty[j] + pow(cv[j],p) ); 
+//printf("%f * %f + %f\n", pow(delta, p) , penalty[j] , pow(cv[j],p) ); 
     }
   }
 
@@ -605,8 +607,8 @@ double cv_objectiveFunctionCompare(
   
   if( failFlag == 1) return(INFINITY);
 
-//  printf("(%4.12f) (%4.12f)", result, resultPrior);
-//  printf("\n");
+//printf("(%4.12f) (%4.12f)", result, resultPrior);
+//printf("\n");
   return( result - resultPrior );
 }  
   

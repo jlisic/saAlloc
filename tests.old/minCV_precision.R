@@ -1,7 +1,7 @@
 library(saAlloc)
 
 set.seed(400)
-iter <- 1000
+iter <- 10
 
 # data set with 100 observations and 4 characteristics split between two strata
 
@@ -81,26 +81,38 @@ b <- saMinCV(
 
 
 # get accepted rows
-accept <- b$accept[b$accept[,'accepted'] == 1,]
+#accept <- b$accept[b$accept[,'accepted'] == 1,]
+accept <- b$accept
 label.cv <- label
 
 # init check data set
 check <- c()
-  
+
 
 test.cv <- saAlloc:::.cv2( x, strata=label.cv, sampleSize=accept[1,names(b$sampleSize)] )
-check <- rbind( check , c( accept[1,10:12], test.cv, accept[1,10:12] - test.cv) )
+obj <- sum((test.cv)^2)
+change <- -1 
+check <- rbind( check , c( accept[1,10:12], test.cv, accept[1,10:12] - test.cv, obj, change) )
 
 # calculate the CV's from the changes in the labels directly
 if( iter > 1 ) {
   for( i in 2:nrow(accept) ) { 
-    label.cv[ accept[i,'selected'] ] <- accept[i,'to'] 
-    test.cv  <- saAlloc:::.cv2( x, strata=label.cv, sampleSize=accept[i,names(b$sampleSize)] )
+    label.cv.new <- label.cv
+    label.cv.new[ accept[i,'selected'] ] <- accept[i,'to'] 
+
+    test.cv  <- saAlloc:::.cv2( x, strata=label.cv.new, sampleSize=accept[i,names(b$sampleSize)] )
+    
+    objNew <- sum((test.cv)^2)
+    change <- objNew - obj
+    if( change <= 0 ) {
+      obj <- objNew
+      label.cv <- label.cv.new
+    }
   
-    check <- rbind( check , c( accept[i,10:12], test.cv, accept[i,10:12] - test.cv) )
+    check <- rbind( check , c( accept[i,10:12], test.cv, accept[i,10:12] - test.cv, obj, change) )
   }
 }
-print(check)
 
+print(max(abs(c(check[,7:9]))))
 
 
