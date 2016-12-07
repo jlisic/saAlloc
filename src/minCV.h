@@ -66,6 +66,8 @@ typedef struct
   size_t preserveSatisfied; //    1 - do not go above a prior met constraint, 
                             //    0 - allow moving above a prior met constraint 
   size_t *** domain;         //domain MDA
+  size_t fpc;              // 1 use a finite population correction factor on CV calculation
+                           // 0 do not use a finite population correction factor on CV calculation
 } 
 minCV_adminStruct;
 
@@ -96,7 +98,9 @@ void * minCV_pack(
   size_t iterSampleSize,    // number of iterations to optimize the sample size
   size_t preserveSatisfied, //    1 - do not go above a prior met constraint, 
                             //    0 - allow moving above a prior met constraint 
-  int * domain              // domain HxKxJ data structure that will be turned into an MDA
+  int * domain,             // domain HxKxJ data structure that will be turned into an MDA
+  int * fpc                 // 1 - use fpc 
+                            // 0 - do not use fpc
 ); 
 
 

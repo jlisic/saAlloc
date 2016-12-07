@@ -37,7 +37,8 @@ void minCV_init (
       a->T,
       a->penalty,
       a->p,
-      a->preserveSatisfied  
+      a->preserveSatisfied,
+      a->fpc  
     );
     
   
@@ -101,13 +102,17 @@ void * minCV_pack(
   size_t iterSampleSize,    // number of iterations to optimize the sample size
   size_t preserveSatisfied, //    1 - do not go above a prior met constraint, 
                             //    0 - allow moving above a prior met constraint 
-  int * domain              // domain HxKxJ data structure that will be turned into an MDA
+  int * domain,             // domain HxKxJ data structure that will be turned into an MDA
+  int * fpc
   ) {
 
   size_t i,h,k,j,r;
    
   // allocate struct 
   minCV_adminStructPtr packedStruct = malloc( sizeof( minCV_adminStruct ) ); 
+  
+  //  use fpc
+  packedStruct->fpc = (size_t) *fpc;
   
   //  target CV
   packedStruct->T = T;
@@ -243,7 +248,8 @@ void * minCV_pack(
     packedStruct->nh, 
     packedStruct->Total, 
     packedStruct->locationAdj_mu, 
-    packedStruct->scaleAdj_mu 
+    packedStruct->scaleAdj_mu,
+    packedStruct->fpc 
   ); 
   packedStruct->candidate_cv = calloc(J, sizeof( double ) );
   for(j = 0; j < J; j++) packedStruct->candidate_cv[j] = packedStruct->cv[j];
@@ -631,7 +637,8 @@ double minCV_costChange (
       a->candidate_nh, 
       a->Total, 
       a->candidate_locationAdj_mu, 
-      a->candidate_scaleAdj_mu
+      a->candidate_scaleAdj_mu,
+      a->fpc
     ); 
 
 // write out current cv
@@ -657,7 +664,8 @@ double minCV_costChange (
       a->p, 
       a->preserveSatisfied, 
       a->iterSampleSize, 
-      NULL
+      NULL,
+      a->fpc
     );
   
 
@@ -682,7 +690,8 @@ double minCV_costChange (
     a->penalty,
     a->p,
     1, // option to not construct CV, under this condition CV cannot be null 
-    a->preserveSatisfied
+    a->preserveSatisfied,
+    a->fpc
   );
 
   // write out current cv

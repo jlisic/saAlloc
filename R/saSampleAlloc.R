@@ -6,14 +6,14 @@ function(
   targetCV,
   sampleSize,
   weightMatrix,            # missing handled
-#  domainMatrixList,
   locationAdjustment,
   scaleAdjustment,
   sampleSizeIterations=100,
   p = 2,                   # l2 norm of the penalty function
   penalty = -1,            # negative penalties are ignored
   cooling = 0,
-  preserveSatisfied=TRUE
+  preserveSatisfied=TRUE,
+  fpc = TRUE
   ) {
 
   tolSize <- 1 # not used
@@ -137,8 +137,8 @@ function(
   
   if(sampleSizeIterations < 0 ) stop("sampleSizeIterations is not positive") 
   if( round(sampleSizeIterations) != sampleSizeIterations ) stop("sampleSizeIterations is not an integer ") 
-   
   
+
   #################### TARGET CV ######################################
   # handle sample size 
 
@@ -223,7 +223,8 @@ r.result <- .C("R_sampleAlloc",
   as.double(penalty),               # 15
   as.double(sampleSize),            # 16
   as.double(a),                     # 17
-  as.double(cooling)                # 18
+  as.double(cooling),               # 18
+  as.integer(fpc)                   # 19
 )
 
 runTime <- proc.time() - Cprog
@@ -241,8 +242,8 @@ runTime <- proc.time() - Cprog
   names(sampleSize) <- sprintf("n_%d",unique.label)
 
   ## final and initial CVs
-  CVStart <- .cv( x, rlabel, sampleSize, average=TRUE) 
-  CV      <- .cv( x, newRlabel, newSampleSize, average=TRUE) 
+  CVStart <- .cv2( x, rlabel, sampleSize, average=TRUE,fpc=fpc) 
+  CV      <- .cv2( x, newRlabel, newSampleSize, average=TRUE,fpc=fpc) 
 
   ## strata Size
   strataSizeStart <- stats::aggregate(rlabel, by=list(rlabel), length)
@@ -266,7 +267,8 @@ runTime <- proc.time() - Cprog
     "strataSize"=strataSize,
     "strataSizeStart"=strataSizeStart,
     "runTime"=runTime,
-    "variables"=x.colnames
+    "variables"=x.colnames,
+    "fpc"=TRUE
   )
 
 
