@@ -99,7 +99,8 @@ double * cv_calcCV(
     double * nh,
     double ** Total,
     double *** locationAdj, /* IF NULL then not used */
-    double *** scaleAdj     /* IF NULL then not used */
+    double *** scaleAdj,    /* IF NULL then not used */
+    size_t fpc
   ); 
 
 /******* FUNCTION FOR CALCULATING OBJECTIVE FUNCTION *********/
@@ -120,7 +121,8 @@ double cv_objectiveFunction(
     double * Target,       /* IF NULL then not used */
     double * penalty,      /* IF NULL then not used */
     double p,
-    size_t evaluateOnly  // option to not construct CV, under this condition CV cannot be null 
+    size_t evaluateOnly, // option to not construct CV, under this condition CV cannot be null 
+    size_t fpc
   ); 
 
 
@@ -146,7 +148,8 @@ double cv_objectiveFunctionCompare(
     double * penalty,
     double p,
     size_t evaluateOnly, // option to not construct CV, under this condition CV cannot be null 
-    size_t preserveSatisfied
+    size_t preserveSatisfied,
+    size_t fpc
   ); 
 
 

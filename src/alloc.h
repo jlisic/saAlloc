@@ -51,7 +51,8 @@ void alloc_sampleSizeChange (
     double p,
     size_t preserveSatisfied,
     size_t iter,
-    double * a
+    double * a,
+    size_t fpc
     ); 
 
 

@@ -95,7 +95,8 @@ void alloc_sampleSizeChange (
     double p,
     size_t preserveSatisfied,
     size_t iter,
-    double * a
+    double * a,
+    size_t fpc
     ) { 
 
 
@@ -150,7 +151,9 @@ void alloc_sampleSizeChange (
       test_nh[Hi] -= 1.0; // decrement stratum Hi 
       test_nh[Hj] += 1.0; // increment stratum Hj
       
-        
+      printf("%d:",(int) i);  
+      for(j =0; j <H; j++) printf("%d,",(int) test_nh[j]);
+
       delta = cv_objectiveFunctionCompare( 
         cv, 
         cvInit, 
@@ -172,10 +175,11 @@ void alloc_sampleSizeChange (
         penalty, 
         p, 
         0, 
-        preserveSatisfied
+        preserveSatisfied,
+        fpc
       ); 
+      printf("\n");
 
-        
 
       if( delta <= 0 ) { 
         // update the cv and strata assignment
@@ -334,7 +338,7 @@ int main() {
   
   // CV
   Rprintf("CV\n");
-  cvInit = cv_calcCV( NULL, N, K, H, R, J, domain, var, Nh, nh, total, NULL, NULL ); 
+  cvInit = cv_calcCV( NULL, N, K, H, R, J, domain, var, Nh, nh, total, NULL, NULL,*fpc); 
   printMDA( (void *) cvInit, MDA_DOUBLE, 1, J); 
   
   // Sample Size 
@@ -395,8 +399,9 @@ void R_sampleAlloc (
   double * pDouble,
   double * penalty, 
   double * nh,      /* sample size by stratum */
-  double * a,
-  double * cooling
+  double * a,  // what we return
+  double * cooling,
+  int * fpc
 ) {              
 
   size_t N = *NInt;
@@ -420,34 +425,16 @@ void R_sampleAlloc (
   }
 
   
-  /* create domain MDA */
-  /* H x K x J */
-
-  /*
-  size_t domain00[] = { 1, 0, 1, 0 };
-  size_t domain01[] = { 0, 1, 0, 0 };
-  
-  size_t domain10[] = { 1, 0, 0, 0 };
-  size_t domain11[] = { 0, 1, 0, 0 };
- 
-  size_t domain20[] = { 1, 0, 1, 0 };
-  size_t domain21[] = { 0, 1, 0, 1 };
-
-  size_t * domain0[] = { domain00, domain01 };
-  size_t * domain1[] = { domain10, domain11 };
-  size_t * domain2[] = { domain20, domain21 };
-  */
- 
   double *** locationAdj;
   double *** scaleAdj; 
 
   // Mean
-  Rprintf("Domain\n");
+  //Rprintf("Domain\n");
   size_t *** domain = (size_t ***) createMDA( MDA_SIZE_T, 3, H, K, J); 
   for( h=0; h < H; h++)
     for( k=0; k < K; k++)
       for( j=0; j < J; j++) domain[h][k][j] = (size_t) domainInt[ h*K*J + k*J + j ];
-  printMDA( (void *) domain , MDA_SIZE_T, 3,  H, K, J); 
+  //printMDA( (void *) domain , MDA_SIZE_T, 3,  H, K, J); 
 
   
   // location adjustement
@@ -489,7 +476,7 @@ void R_sampleAlloc (
   
   // CV
   Rprintf("CV\n");
-  cvInit = cv_calcCV( NULL, N, K, H, R, J, domain, var, Nh, nh, total, locationAdj, scaleAdj ); 
+  cvInit = cv_calcCV( NULL, N, K, H, R, J, domain, var, Nh, nh, total, locationAdj, scaleAdj, (size_t) *fpc ); 
   printMDA( (void *) cvInit, MDA_DOUBLE, 1, J); 
   
   // Sample Size 
@@ -498,7 +485,7 @@ void R_sampleAlloc (
  
   // get change in allocation 
   alloc_sampleSizeChange (
-      cvInit, N, K, H, R, J, domain, var, Nh, nh, total, locationAdj, scaleAdj, target, penalty, p, 0, iter, a);
+      cvInit, N, K, H, R, J, domain, var, Nh, nh, total, locationAdj, scaleAdj, target, penalty, p, 0, iter, a, (size_t) * fpc);
   
   // CV
   Rprintf("CV -final\n");

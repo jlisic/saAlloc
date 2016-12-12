@@ -437,7 +437,8 @@ double * cv_calcCV(
     double * nh,
     double ** Total,
     double *** locationAdj,
-    double *** scaleAdj
+    double *** scaleAdj,
+    size_t fpc
   ) {
 
   double *** varDomain;
@@ -450,13 +451,27 @@ double * cv_calcCV(
 
   if( cv == NULL) cv = calloc( J, sizeof(double) );
 
-
-  for( j = 0; j < J; j++) {
-    cv[j] = 0;
-    for( r = 0; r < R; r++ ) {
-      varSum[r] = 0;
-      for( h = 0; h < H; h++) varSum[r] +=  (double) (Nh[h] * Nh[h]) /nh[h] * varDomain[j][h][r];
-      cv[j] += sqrt(varSum[r])/( Total[j][r] * RDouble);
+  if( fpc == 1 ) {
+    for( j = 0; j < J; j++) {
+      cv[j] = 0;
+      for( r = 0; r < R; r++ ) {
+        varSum[r] = 0;
+        for( h = 0; h < H; h++) {
+          varSum[r] +=  (double) (Nh[h] * Nh[h]) * (1- (double) nh[h]/Nh[h]) /nh[h] * varDomain[j][h][r];
+        }
+        cv[j] += sqrt(varSum[r])/( Total[j][r] * RDouble);
+      }
+    }
+  } else {
+    for( j = 0; j < J; j++) {
+      cv[j] = 0;
+      for( r = 0; r < R; r++ ) {
+        varSum[r] = 0;
+        for( h = 0; h < H; h++) {
+          varSum[r] +=  (double) (Nh[h] * Nh[h]) * (1- (double) nh[h]/Nh[h]) /nh[h] * varDomain[j][h][r];
+        }
+        cv[j] += sqrt(varSum[r])/( Total[j][r] * RDouble);
+      }
     }
   }
   
@@ -484,7 +499,8 @@ double cv_objectiveFunction(
     double * Target,
     double * penalty,
     double p,
-    size_t evaluateOnly  // option to not construct CV, under this condition CV cannot be null 
+    size_t evaluateOnly, // option to not construct CV, under this condition CV cannot be null 
+    size_t fpc
   ) {
 
 
@@ -494,20 +510,20 @@ double cv_objectiveFunction(
 
   /* get the CV */
   if( evaluateOnly != 1 ) {
-    cv = cv_calcCV( cv, N, K, H, R, J, Domain, var, Nh, nh, Total, locationAdj, scaleAdj ); 
+    cv = cv_calcCV( cv, N, K, H, R, J, Domain, var, Nh, nh, Total, locationAdj, scaleAdj,fpc); 
   }
     
 
   for( j = 0; j < J; j++) {
 
 
-    if( Target != NULL) delta = cv[j] - Target[j];
+    if( Target != NULL) delta = fabs(cv[j]) - fabs(Target[j]);
  
     /* apply the penalty function */ 
-    if( (delta > 0) | (penalty == NULL) | (Target == NULL) ) {
+    if( (delta <= 0) | (penalty == NULL) | (Target == NULL) ) {
       result+= pow(cv[j], p); 
     } else {
-      result+= pow(-1.0 * delta, p) * penalty[j] + pow(cv[j],p); 
+      result+= pow(delta, p) * penalty[j] + pow(cv[j],p); 
     }
   }
 
@@ -540,31 +556,24 @@ double cv_objectiveFunctionCompare(
     double * penalty,
     double p,
     size_t evaluateOnly, // option to not construct CV, under this condition CV cannot be null 
-    size_t preserveSatisfied
+    size_t preserveSatisfied,
+    size_t fpc
   ) {
   
   double result = 0;
   double resultPrior = 0;
+  double result_penalty = 0;
+  double resultPrior_penalty=0;
   size_t j;
   double delta = 0;
   double deltaPrior = 0;
   size_t failFlag = 0;  // value set to 1 if there is a violation of preserve satisfied
 
-//  printf("H = %d, K = %d, J = %d, R = %d, N = %d\n", (int) H, (int) K, (int) J, (int) R, (int) N);
- 
-//  if( evaluateOnly != 1) printf("  test = %f\n", var[0][0][0]);
-
-//  if( evaluateOnly != 1) printf("var (obj) :\n"), printMDA( (void *) var, MDA_DOUBLE, 3, K,H,R);
-  
-//  if( evaluateOnly != 1) printf("total (obj) :\n"), printMDA( (void *) Total, MDA_DOUBLE, 2,J, R);
 
   /* get the CV */
   if( evaluateOnly != 1 ) {
-    cv = cv_calcCV( cv, N, K, H, R, J, Domain, var, Nh, nh, Total, locationAdj, scaleAdj ); 
+    cv = cv_calcCV( cv, N, K, H, R, J, Domain, var, Nh, nh, Total, locationAdj, scaleAdj,fpc ); 
   }
-
-//  printf("cv (obj) :\n");
-//  printMDA( (void *) cv, MDA_DOUBLE, 1, J);
 
   for( j = 0; j < J; j++) {
 
@@ -580,26 +589,26 @@ double cv_objectiveFunctionCompare(
         ) failFlag = 1; 
     }
 
-//printf("  j = %d delta = %f, deltaPrior =%f\n", (int) j, delta, deltaPrior);
 
     // apply the penalty function 
     if( (deltaPrior <= 0) | (penalty == NULL) | (Target == NULL) ) {
       resultPrior+= pow(cvPrior[j], p); 
-//printf("[%4.12f] ", pow(cvPrior[j], p) ); 
     } else {
-      resultPrior+= pow(deltaPrior, p) * penalty[j] + pow(cvPrior[j],p); 
-//printf("%f * %f + %f\n", pow(deltaPrior, p) , penalty[j] , pow(cvPrior[j],p) ); 
+      resultPrior+= pow(cvPrior[j], p); 
+      resultPrior_penalty+= deltaPrior * penalty[j]; 
     }
  
     // apply the penalty function 
     if( (delta <= 0) | (penalty == NULL) | (Target == NULL) ) {
       result+= pow(cv[j], p); 
-//printf("%4.12f ", pow(cv[j], p) ); 
     } else {
-      result+= pow(delta, p) * penalty[j] + pow(cv[j],p); 
-//printf("%f * %f + %f\n", pow(delta, p) , penalty[j] , pow(cv[j],p) ); 
+      result+= pow(cv[j], p); 
+      result_penalty+= delta * penalty[j]; 
     }
   }
+
+  result=sqrt(result) + result_penalty;
+  resultPrior = sqrt(resultPrior) + resultPrior_penalty;
 
   if( obj != NULL ) *obj = result;
   if( objPrior != NULL ) *objPrior = resultPrior;
@@ -608,7 +617,8 @@ double cv_objectiveFunctionCompare(
   if( failFlag == 1) return(INFINITY);
 
 //printf("(%4.12f) (%4.12f)", result, resultPrior);
-//printf("\n");
+printf("%4.12f ", result);
+printf("\n");
   return( result - resultPrior );
 }  
   
@@ -616,138 +626,3 @@ double cv_objectiveFunctionCompare(
   
   
   
-  
-  
-
-
-/* test function */
-
-#ifdef TESTC
-
-int main() {
-
-  double x[]  = {
-    1.0, 2.0, 3.0, 
-    4.0, 4.0, 5.0, 
-    5.0, 5.0, 1.0, 
-    2.0, 3.0, 4.0, 
-    2.0, 3.0, 4.0, 
-
-    4.0, 5.0, 5.0, 
-    5.0, 1.0, 2.0, 
-    3.0, 4.0, 4.0, 
-    5.0, 5.0, 5.0, 
-    5.0, 5.0, 5.0, 
-
-    0.0, 2.0, 3.0, 
-    4.0, 5.0, 5.0, 
-    5.0, 5.0, 0.0, 
-    2.0, 3.0, 4.0, 
-    2.0, 3.0, 4.0, 
-   
-
-    4.0, 6.0, 5.0, 
-    5.0, 0.0, 2.0, 
-    3.0, 4.0, 4.0, 
-    3.0, 4.0, 4.0, 
-    5.0, 7.0, 5.0,
-
-    0.0, 2.0, 3.0, 
-    4.0, 5.0, 5.0, 
-    5.0, 5.0, 0.0, 
-    2.0, 3.0, 4.0, 
-    2.0, 3.0, 4.0, 
-    
-    4.0, 6.0, 5.0, 
-    5.0, 0.0, 2.0, 
-    3.0, 4.0, 4.0, 
-    3.0, 4.0, 4.0, 
-    5.0, 7.0, 5.0 
-  };
-
-  size_t I[]  = {  0,   0,   0,   0,  0,  1,  1,   1,   1,   1, 2, 2, 2, 2, 2 };
-  size_t Nh[] = {  5,   5, 5 };
-  double nh[] = {  3,   3, 2 };
-  double target[] = { 1.0, 1.1, 1.2, 1.4 };
-
-  size_t K = 2;
-  size_t N  = 15;
-  size_t R = 3;
-  size_t H  = 3;
-  size_t J  = 4;
-  size_t i;
-
-  size_t domain00[] = { 1, 0, 1, 0 };
-  size_t domain01[] = { 0, 1, 0, 0 };
-  
-  size_t domain10[] = { 1, 0, 0, 0 };
-  size_t domain11[] = { 0, 1, 0, 0 };
- 
-  size_t domain20[] = { 1, 0, 1, 0 };
-  size_t domain21[] = { 0, 1, 0, 1 };
-
-  size_t * domain0[] = { domain00, domain01 };
-  size_t * domain1[] = { domain10, domain11 };
-  size_t * domain2[] = { domain20, domain21 };
-
-  size_t ** domain[] = {domain0, domain1, domain2};
-
-
-  double penalty[] = {10, 10, 10, 10};
-  double ** total;
-  double * cv;
-  double p = 1;
-    
-
-  printf("Mean\n");
-  double *** mu = cv_createMeanMatrix(I, N, K, H, R, x, Nh); 
-  printMDA( (void *) mu, MDA_DOUBLE, 3, K, H, R); 
-
-  printf("Variance\n");
-  double *** var = cv_createVarMatrix(I, N, K, H, R,  x, mu, Nh); 
-  printMDA( (void *) var, MDA_DOUBLE, 3, K, H, R); 
-
-  
-  total =  cv_createTotalMatrix( N, K, H, R, J, (size_t ***) domain, mu, Nh);
-  printf("Total\n");
-  printMDA( (void *) total, MDA_DOUBLE, 2, J,  R); 
-  
-
-
-
-  printf("CV\n");
-  cv = cv_calcCV( NULL, N, K, H, R, J, domain, var, Nh, nh, total, NULL, NULL ); 
-  printMDA( (void *) cv, MDA_DOUBLE, 1, J); 
-
-  printf("obj: %f\n", 
-    cv_objectiveFunction( 
-      cv, N, K, H, R, J, domain, var, Nh, nh, total, NULL, NULL, target, penalty, p, 0)
-    ); 
-
-
-  cv_updateMatrix( I, N, K, H, R, x, mu, var, Nh, 0, 1 ); 
-  
-  printf("Updated Mean\n");
-  printMDA( (void *) mu, MDA_DOUBLE, 3, K, H, R); 
-
-  printf("Updated Variance\n");
-  printMDA( (void *) var, MDA_DOUBLE, 3, K, H, R); 
-
-  
-
-  // clean up 
-  printf(" Deleteing Mean\n");
-  deleteMDA( (void * ) mu, 3, K, H); 
-  printf(" Deleteing Var\n");
-  deleteMDA( (void *) var, 3, K, H); 
-  printf(" Deleteing Total\n");
-  deleteMDA( (void *) total, 2, K); 
-  printf(" Deleteing CV\n");
-  deleteMDA( (void *) cv, 1, J); 
-
-  printf("Finished\n");
-  return( 0 ) ;
-}
-
-#endif
-

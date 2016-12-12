@@ -81,8 +81,8 @@ function(
   strataSize <- stats::aggregate(rlabel, by=list(newLabel), length)$x
   
   # calculate CV
-  CVStart  <- .cv2( x, rlabel, strataSize, average=TRUE)
-  CV  <- .cv2( x, newLabel, strataSizeStart, average=TRUE)
+  CVStart  <- .cv2( x, rlabel, strataSize, average=TRUE, fpc=FALSE)
+  CV  <- .cv2( x, newLabel, strataSizeStart, average=TRUE, fpc=FALSE)
   CVTarget <- k*sqrt((targetVar + varWithin)*strataSizeStart)/ colSums(x)
 
 

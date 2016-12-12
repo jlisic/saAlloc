@@ -84,7 +84,8 @@ void R_minCV (
     int * auxFunctionIterInt,    /* how often to run the auxiliary function 1        20*/
     int * costChangeSizeInt,     /* size of a cost change element           1        21*/
     int * iterInt,               /*                                                  22*/
-    int * preservedSatisfiedInt
+    int * preservedSatisfiedInt,
+    int * fpc                    /* finite population correction factor              23*/
   ) { 
   
   /* note that we get ints from R and we want to work with size_t, which are not the same for most systems */ 
@@ -149,7 +150,8 @@ void R_minCV (
     iterSampleSize,  // number of iterations to optimize the sample size
     preserveSatisfied, //    1 - do not go above a prior met constraint, 
                      //    0 - allow moving above a prior met constraint 
-    domainInt        // domain HxKxJ data structure that will be turned into an MDA
+    domainInt,       // domain HxKxJ data structure that will be turned into an MDA
+    fpc
    );
 
 

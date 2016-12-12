@@ -4,7 +4,6 @@ saMinCV <- function(
   targetCV,
   sampleSize,
   weightMatrix,            # missing handled
-  #domainMatrixList,
   iterations=1000,
   sampleSizeIterations=3,
   recalcIterations=10000,
@@ -13,7 +12,8 @@ saMinCV <- function(
   p = 2,                   # l2 norm of the penalty function
   penalty = -1,            # negative penalties are ignored
   cooling = 0,
-  preserveSatisfied=TRUE
+  preserveSatisfied=TRUE,
+  fpc=TRUE
   ) {
 
   tolSize <- 1 # not used
@@ -80,7 +80,7 @@ saMinCV <- function(
 
   #################### SCALE ADJUSTMENT #########################################
  
-  # location adjustment is H x K  
+  # location adjustment is N x K  
   if( missing( scaleAdjustment ) ) {
     C_scaleAdjustment = -1
   } else {
@@ -184,7 +184,6 @@ saMinCV <- function(
   
   if(recalcIterations < 0 ) stop("recalcIterations is not positive") 
   if( round(recalcIterations) != recalcIterations ) stop("recalcIterations is not an integer ") 
-   
   
   #################### TARGET CV ######################################
   # handle sample size 
@@ -242,7 +241,8 @@ saMinCV <- function(
     as.integer(recalcIterations),     #20  /* how often to update the counter */
     as.integer(costChangeSize),       #21
     as.integer(iterations),           #22     
-    as.integer(preserveSatisfied)     #23
+    as.integer(preserveSatisfied),    #23
+    as.integer(fpc)                   #24
   )
 
   runTime <- proc.time() - Cprog
@@ -274,20 +274,20 @@ saMinCV <- function(
   ## final and initial CVs
   if( missing(locationAdjustment) & missing(scaleAdjustment) ) { 
     print("no adjustment")
-    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE)
-    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE )
+    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, fpc=fpc)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE,fpc=fpc )
   } else if( missing(locationAdjustment) )  { 
     print("just scale adjustment")
-    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
-    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment)
+    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, scaleAdjustment=scaleAdjustment,fpc=fpc)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment,fpc=fpc)
   } else if( missing(scaleAdjustment) )  { 
     print("just location adjustment")
-    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, locationAdjustment=locationAdjustment)
-    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment)
+    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, locationAdjustment=locationAdjustment,fpc=fpc)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment,fpc=fpc)
   } else {
     print("both adjustments")
-    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
-    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment)
+    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment,fpc=fpc)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment,fpc=fpc)
   }
 
 
@@ -313,7 +313,8 @@ saMinCV <- function(
     "strataSize"=strataSize,
     "strataSizeStart"=strataSizeStart,
     "runTime"=runTime,
-    "variables"=x.colnames
+    "variables"=x.colnames,
+    "fpc"=fpc
   )
 
 
