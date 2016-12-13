@@ -468,7 +468,7 @@ double * cv_calcCV(
       for( r = 0; r < R; r++ ) {
         varSum[r] = 0;
         for( h = 0; h < H; h++) {
-          varSum[r] +=  (double) (Nh[h] * Nh[h]) * (1- (double) nh[h]/Nh[h]) /nh[h] * varDomain[j][h][r];
+          varSum[r] +=  (double) (Nh[h] * Nh[h]) /nh[h] * varDomain[j][h][r];
         }
         cv[j] += sqrt(varSum[r])/( Total[j][r] * RDouble);
       }

@@ -471,7 +471,10 @@ size_t minCV_randomState (
       );
  
     /* check if there are units that I can move */ 
-    if( Nh[ I[i] ] > 2 ) {
+    if( 
+        (Nh[ I[i] ] > 2)  &      
+        (Nh[ I[i] ] > a->nh[ I[i] ])  
+        ) {
       
       a->Hj = minCV_getMoveStrata( i, I, a->prob, a->probMatrix, N, H);
   
@@ -607,6 +610,7 @@ double minCV_costChange (
   double delta = INFINITY; 
   double obj, candidate_obj;
 
+  //size_t j;
 
   // apply the variance change 
   // note that we only update the cv if there is a change in strata 
@@ -672,6 +676,12 @@ double minCV_costChange (
   //if( nhSum != nhSumCan ) 
   //printf(" nhSum = %f , nhSumCan = %f\n", nhSum, nhSumCan);
 
+/*
+for(j=0;j <J;j++) {
+  printf("%d: cv=%f n_h=%d N_h=%d (candidate)\n",(int) j, a->candidate_cv[j], (int) a->candidate_nh[j], (int) a->candidate_Nh[j] );
+  printf("%d: cv=%f n_h=%d N_h=%d\n",(int) j, a->cv[j], (int) a->nh[j], (int) a->Nh[j] );
+}
+*/
 
   delta =  cv_objectiveFunctionCompare( 
     a->candidate_cv,         //if cv = NULL create it, otherwise handle in place 
