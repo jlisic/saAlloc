@@ -119,10 +119,12 @@ saMinCV(
   \code{TRUE} implies that any constraint that is met for an accepted state is kept,
   \code{FALSE} allows for met CVs to be violated by accepted states.
  }
- \item{fpc}{ A binary indicator to use, default, the finite population correction 
-   factor.}  
- }
-\value{
+  \item{fpc}{
+  \code{TRUE} use a finite population correction factor (fpc),
+  \code{FALSE} do not use a fpc. 
+ } 
+}
+ \value{
   \item{accept}{ Matrix with three columns and a row for each iteration, 
     "change":   change in objective function, 
     "U":        uniform random variable, 

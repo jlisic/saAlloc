@@ -195,8 +195,8 @@ saMinCV <- function(
   } else if( length(names(targetCV)) == 0 ) {
     #warning( "targetCV has no names, assuming that the targetCV are in the same order as x." ) 
   # error if there are names but don't match what we find in unique.label
-  } else if( !identical( sort(names(targetCV)), sort(domainMatrixList.names))  ) {
-    stop( "targetCV names do match column names of domainMatrix" ) 
+  #} else if( !identical( sort(names(targetCV)), sort(domainMatrixList.names))  ) {
+  #  stop( "targetCV names do match column names of domainMatrix" ) 
   } else if( anyDuplicated( names(targetCV) ) != 0  ) {
     stop( "targetCV names do exist but are not unique" ) 
   # at this point everthing seems ok, so reorder the sample size
