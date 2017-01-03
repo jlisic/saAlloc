@@ -36,8 +36,7 @@ saMinCV <- function(
   # get rows etc... 
   N <- length(label)            # number of observations
   K <- ncol(x)                  # number of distinct characteristics  (independent subsets of the covariance matrix)
-  R <- length(c(x)) / (N * K)   # dimension of each of the distinct characteristics 
-                                # (dependent members of the subsets of the covariance matrix)
+  R <- length(c(x)) / (N * K)   # replications of each of the distinct characteristics 
   H <- length(unique.label)     # number of strata
   
   # get colnames for x 
@@ -201,7 +200,7 @@ saMinCV <- function(
     stop( "targetCV names do exist but are not unique" ) 
   # at this point everthing seems ok, so reorder the sample size
   } else {
-    targetCV <- targetCV[ domainMatrixList.names ] 
+    #targetCV <- targetCV[ domainMatrixList.names ] 
   }
   
   costChangeSize <- 6 + H + J  
@@ -214,7 +213,8 @@ saMinCV <- function(
 #  print(paste( "K", K))
 #  print(paste( "R", R))
 #  print(paste( "H", H))
-#  print(paste( "penalty: ", penalty))
+  print(paste( "penalty: ", penalty))
+  print(paste( "targetCV: ", targetCV))
 
 
   #################### RUN C FUNCTION ######################################
@@ -274,20 +274,20 @@ saMinCV <- function(
   ## final and initial CVs
   if( missing(locationAdjustment) & missing(scaleAdjustment) ) { 
     print("no adjustment")
-    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, fpc=fpc)
-    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE,fpc=fpc )
+    CVStart  <- .cv2( x, rlabel, sampleSize, average=(R!=1), fpc=fpc)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=(R!=1),fpc=fpc )
   } else if( missing(locationAdjustment) )  { 
     print("just scale adjustment")
-    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, scaleAdjustment=scaleAdjustment,fpc=fpc)
-    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, scaleAdjustment=scaleAdjustment,fpc=fpc)
+    CVStart  <- .cv2( x, rlabel, sampleSize, average=(R!=1), scaleAdjustment=scaleAdjustment,fpc=fpc)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=(R!=1), scaleAdjustment=scaleAdjustment,fpc=fpc)
   } else if( missing(scaleAdjustment) )  { 
     print("just location adjustment")
-    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, locationAdjustment=locationAdjustment,fpc=fpc)
-    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment,fpc=fpc)
+    CVStart  <- .cv2( x, rlabel, sampleSize, average=(R!=1), locationAdjustment=locationAdjustment,fpc=fpc)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=(R!=1), locationAdjustment=locationAdjustment,fpc=fpc)
   } else {
     print("both adjustments")
-    CVStart  <- .cv2( x, rlabel, sampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment,fpc=fpc)
-    CV  <- .cv2( x, newRlabel, newSampleSize, average=TRUE, locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment,fpc=fpc)
+    CVStart  <- .cv2( x, rlabel, sampleSize, average=(R!=1), locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment,fpc=fpc)
+    CV  <- .cv2( x, newRlabel, newSampleSize, average=(R!=1), locationAdjustment=locationAdjustment, scaleAdjustment=scaleAdjustment,fpc=fpc)
   }
 
 

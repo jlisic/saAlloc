@@ -69,6 +69,9 @@
       stats::var
     )[,c(-1,-2)]
 
+ vars.init <<- vars 
+ R <<- R
+
   # perform scale adjustment on S^2 
   if( !missing(scaleAdjustment) ) {
     scaleAdjustment <- 
@@ -105,6 +108,11 @@
   totals <- stats::aggregate(x, by=list(rep(1:R,length(strata))),sum)[,-1] 
   Nh <- stats::aggregate( strata,by=list(strata), length)[,-1]
 
+  vars <<- vars
+  totals <<- totals
+  Nh <<- totals
+
+
   if(fpc) {
     varsAdj <- vars*(Nh^2/sampleSize) * (1 - sampleSize/Nh)
   } else {
@@ -113,8 +121,13 @@
 
   result <- sqrt( stats::aggregate( varsAdj , by=list(rep(1:R,each=H)), sum)[,-1])  
 
+  varsAdj <<- varsAdj 
 
-  return( colMeans( result / totals ) )
+  if( !is.null(dim(result)) ) {
+    return( colMeans( result / totals ) )
+  } else {
+    return( mean( result / totals ) )
+  }
 }
 
 

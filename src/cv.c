@@ -205,12 +205,12 @@ void cv_updateMatrix2(
     size_t K, 
     size_t H, 
     size_t R, 
-    double * x, 
-    double * x1,
-    double * x2,
+    double * x,   // x 
+    double * x1,  // location adjust 
+    double * x2,  // scale adjust
     double *** mu, 
-    double *** mu1, 
-    double *** mu2, 
+    double *** mu1,  // mu for location
+    double *** mu2,  // mu for scale
     double *** var, 
     size_t * Nh,
     size_t moveObs,       /* this is the observation to move */
