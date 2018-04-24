@@ -1,21 +1,6 @@
-/* Jonathan Lisic */
-/* standard libraries */
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <math.h>
-#include "R.h"
 
-/* program headers */
-#include "dist.h"
-//#include "file.h"
-#include "sa.h"
+#include "mainSubstrata2.h"
 
-#include "substrata2.h"
-
-/* this needs to be updated for other platforms if not using gcc */
-/* and also for running on 32 bit archs */
-#define F_SIZET "%zu"
 
 /**************************** MAIN R ******************************************/
 /* read in input and output from R                                            */

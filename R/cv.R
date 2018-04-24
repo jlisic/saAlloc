@@ -62,6 +62,7 @@
     R <- 1
   }
 
+  # calculate variance of each strata
   vars <- 
     stats::aggregate( 
       x,
@@ -69,8 +70,6 @@
       stats::var
     )[,c(-1,-2)]
 
- vars.init <<- vars 
- R <<- R
 
   # perform scale adjustment on S^2 
   if( !missing(scaleAdjustment) ) {

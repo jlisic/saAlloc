@@ -85,7 +85,7 @@ void alloc_sampleSizeChange (
     size_t J, 
     size_t *** Domain,
     double *** var, 
-    size_t * Nh,
+    size_t * Nh,   // what gets passed in is the candidate
     double * nh,
     double ** Total,
     double *** locationAdj,
@@ -151,9 +151,6 @@ void alloc_sampleSizeChange (
       test_nh[Hi] -= 1.0; // decrement stratum Hi 
       test_nh[Hj] += 1.0; // increment stratum Hj
       
-      //printf("%d:",(int) i);  
-      //for(j =0; j <H; j++) printf("%d,",(int) test_nh[j]);
-
       delta = cv_objectiveFunctionCompare( 
         cv, 
         cvInit, 
@@ -178,8 +175,6 @@ void alloc_sampleSizeChange (
         preserveSatisfied,
         fpc
       ); 
-      //printf("\n");
-
 
       if( delta <= 0 ) { 
         // update the cv and strata assignment
@@ -207,9 +202,6 @@ void alloc_sampleSizeChange (
     if( a != NULL ) a[i] = delta;
   }
     
-
-  // copy values over
-  //for(h = 0; h < H; h++) nh[h] = test_nh[h]; 
   free(test_nh);
   free(cv);
 
@@ -220,55 +212,45 @@ void alloc_sampleSizeChange (
 
 
 
-
-
-
-
 /**************** R FUNC ****************************/
 
 
 void R_sampleAlloc (
-  double * x,      /* the column major listing of items      K*N*R  */
-  int * NInt,      /* number of PSUs */
-  int * JInt,      /* number of domains */
-  int * KInt,      /* number of variables */
+  double * totalDouble,    /* the column major listing of means      J*R  */
+  double * varDouble,   /* the column major listing of variances  J*H*R  */
+  int * JInt,      /* number of variables */
   int * HInt,      /* number of strata */
-  int * RInt,      /* number of observations of each PSU */
+  int * RInt,      /* number of observations of each PSU (e.g. years) */
   int * iterInt,   /* number of interations                  1      */
-  int * IInt,      /* destructive: init/final allocation     n      */
-  int * domainInt, /*                                        H*K*J  */
-  double * probMatrix, /*                                    N*H    */ 
-  double * target,
-  double * locationAdjDouble,
+  int * domainInt, /*                                        H*J  */
+  double * target,   /* target CV*/
+  double * locationAdjDouble,  
   double * scaleAdjDouble,
   double * pDouble,
-  double * penalty, 
+  double * penalty,  /* length J */
   double * nh,      /* sample size by stratum */
+  int * NhInt,      /* pop size by stratum */
   double * a,  // what we return
   double * cooling,
   int * fpc
 ) {              
 
-  size_t N = *NInt;
   size_t J = *JInt;
-  size_t K = *KInt;
+  size_t K = *JInt; /* not really used anymore */
   size_t H = *HInt;
   size_t R = *RInt;
+  size_t N = 0;
 
   size_t i,h,j,k,r;
   size_t iter = *iterInt;
   double p = * pDouble;
-  double ** total;
-  double * cvInit;
+  double * cvInit = NULL;
 
   size_t * Nh = (size_t *) createMDA( MDA_SIZE_T, 1, H); 
-  size_t * I = (size_t *) createMDA( MDA_SIZE_T, 1, N); 
-  
-  for(i = 0; i < N; i++) {
-    I[i] = IInt[i];
-    Nh[I[i]]++;
+  for(h=0;h<H;h++) {
+    Nh[h] = NhInt[h];
+    N += Nh[h];
   }
-
   
   double *** locationAdj;
   double *** scaleAdj; 
@@ -280,14 +262,22 @@ void R_sampleAlloc (
       for( j=0; j < J; j++) domain[h][k][j] = (size_t) domainInt[ h*K*J + k*J + j ];
 
   
-  // location adjustement
+  // location adjustment
+  // k is domain (including commodities) 
+  // h is strata
+  // r is replicate
+  // x_k,h,t
+  //  x_0,0,t  x_0,0,t+1  x_0,0,t+2 
   if( locationAdjDouble[0] >= 0 ) { 
-    locationAdj = cv_createMeanMatrix(I, N, K, H, R, x, Nh); 
+    locationAdj = (double ***) createMDA( MDA_DOUBLE, 3, K, H, R); 
+    for( k=0; k < K; k++) 
+      for( h=0; h < H; h++) 
+        for( r=0; r < R; r++) locationAdj[k][h][r] = locationAdjDouble[k*H*R + h*R + r];
   } else {
     locationAdj = NULL;
   }
   
-  // scale adjustmentf
+  // scale adjustment
   if( scaleAdjDouble[0] >= 0 ) { 
     scaleAdj = (double ***) createMDA( MDA_DOUBLE, 3, K, H, R); 
     for( k=0; k < K; k++) 
@@ -297,34 +287,45 @@ void R_sampleAlloc (
     scaleAdj = NULL;
   }
 
-  // Mean
-  double *** mu = cv_createMeanMatrix(I, N, K, H, R, x, Nh); 
+  // Variance (commodity, strata, rep)
+  double ** total = (double **) createMDA( MDA_DOUBLE, 2, K, R); 
+  for( k=0; k < K; k++) 
+      for( r=0; r < R; r++) total[k][r] = totalDouble[k*R + r];
 
-  // Variance
-  double *** var = cv_createVarMatrix(I, N, K, H, R,  x, mu, Nh); 
+  // Variance (actually S^2)  (commodity, strata, rep)
+  double *** var = (double ***) createMDA( MDA_DOUBLE, 3, K, H, R); 
+  for( k=0; k < K; k++) 
+    for( h=0; h < H; h++) 
+      for( r=0; r < R; r++) var[k][h][r] = varDouble[k*H*R + h*R + r];
 
-  // Total 
-  total =  cv_createTotalMatrix( N, K, H, R, J, (size_t ***) domain, mu, Nh);
-
+  /* for debug */
+  /*
+  printf("K = %d, J = %d, H= %d, R = %d\n", (int) K, (int) J, (int) H, (int) R);  
+  printf("total\n"); 
+  printMDA( (void *) total, MDA_DOUBLE, 2, J, R); 
+  printf("total\n"); 
+  printMDA( (void *) var, MDA_DOUBLE, 3, J, H, R); 
+  */
   
-  // CV
+  // CV 
   cvInit = cv_calcCV( NULL, N, K, H, R, J, domain, var, Nh, nh, total, locationAdj, scaleAdj, (size_t) *fpc ); 
- 
+  
+  /* for debug */
+  //printf("cvInit\n"); 
+  //printMDA( (void *) cvInit, MDA_DOUBLE, 1, J); 
+
+   
   // get change in allocation 
   alloc_sampleSizeChange (
       cvInit, N, K, H, R, J, domain, var, Nh, nh, total, locationAdj, scaleAdj, target, penalty, p, 0, iter, a, (size_t) * fpc);
   
-
+  //printMDA( (void *) penalty, MDA_DOUBLE, 1, J); 
   
-  printMDA( (void *) penalty, MDA_DOUBLE, 1, J); 
 
   // clean up 
-  deleteMDA( (void * ) mu, 3, K, H); 
   deleteMDA( (void *) var, 3, K, H); 
   deleteMDA( (void *) total, 2, J); 
   deleteMDA( (void *) cvInit, 1); 
-  deleteMDA( (void *) Nh, 1); 
-  deleteMDA( (void *) I, 1); 
 
   if( locationAdjDouble[0] >= 0 ) {
     deleteMDA( (void * ) locationAdj, 3, K, H); 
@@ -335,7 +336,6 @@ void R_sampleAlloc (
 
   return;
 }
-
 
 
 

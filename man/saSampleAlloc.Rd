@@ -16,63 +16,44 @@ vector of CVs for the current allocation.
 }
 \usage{
 saSampleAlloc(
-     x, 
-     label, 
-     targetCV, 
-     sampleSize, 
-     weightMatrix, 
-     locationAdjustment,
-     scaleAdjustment,
-     sampleSizeIterations=100, 
-     p = 2,                   
-     penalty = -1,            
-     cooling = 0,
-     preserveSatisfied=TRUE,
-     fpc=TRUE
+  total,
+  S2,
+  targetCV,
+  sampleSize,
+  strataSize, 
+  locationAdjustment,
+  scaleAdjustment,
+  iterations=100,
+  p = 2,                   # l2 norm of the penalty function
+  penalty = -1,            # negative penalties are ignored
+  cooling = 0,
+  preserveSatisfied=TRUE,
+  fpc = TRUE
    )
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{x}{
-  (Required) A matrix where each row is a sampling unit and each column is a 
-  characteristic of the sampling unit.    
+  \item{total}{
+  (Required) A matrix where each row is a replicate population total and 
+  each column is a characteristic of the sampling population used for
+  allocation.    
 
-  Multiple observations of the same PSU can be included by including additional
-  rows for each observation.  When data is presented in this manner, the 
-  average CV of each characteristic is used in the objective function.
- 
-  e.g. for 3 observations per PSU:
-
-  PSU  Observation of PSU   .... data
-
-  1    1
-
-  1    2
-
-  1    3
-
-  2    1
-
-  2    2
-
-  2    3
-
-  .    . 
-
-  .    .
-
-  .    .
-
-  Note that only \code{x} should be of this form for multiple observations 
-  per PSU.  All other parameters should be of the same size as if there was 
-  a single observation per PSU.
+  When replicates are used, the average CV of each characteristic is used 
+  in the objective function.
   }
-  \item{label}{
-  (Required) Integer valued initial stratum assignment.
+  \item{S2}{
+  (Required) A matrix where each row identifies a stratum (in order) and 
+  each column is a characteristic of the sampling population used for 
+  allocation.  The values of this matrix is the variance estimate for each 
+  sampling unit within each stratum (S^2).
+
+  When replicates are used for total, a variance must also be provided for
+  each replicate.  This is done by appending each replicate matrix of 
+  variances to the S2 matrix in the same order it appears in total.
   }
   \item{targetCV}{
   (Required) A vector of target CVs.  This vector must be of equal length 
-  to the number of columns of \code{x}. 
+  to the number of columns of \code{total}. 
   }
   \item{sampleSize}{
   (Required) sample size, either an integer valued scalar that will be 
@@ -80,23 +61,21 @@ saSampleAlloc(
   the sample size cannot be split excess sample allocations will be given 
   to strata in increasing order.
   }
-  \item{weightMatrix}{
-  A matrix of size \code{nrow(x)} by total strata.  PSUs with larger weights
-  are more likely to be selected in the simulated annealing procedure.
-  Acceleration of the procedure can be attained by using weights inversely
-  proportional to the distance to known strata boundaries.
+  \item{strataSize}{
+  (Required) strata size, an integer valued array or population sizes by
+  stratum. 
   }
   \item{locationAdjustment}{
   A constant value added to the population variable for each administrative 
-  variable, this is of the same size and layout of \code{x}.  
+  variable, this is of the same size and layout of \code{S2}.  
   }
   \item{scaleAdjustment}{
   A constant value multiplied by the population variable (before the location 
   adjustment) for each administrative variable, this is of the same size and 
-  layout of \code{x}.  
+  layout of \code{S2}.  
   }
-  \item{sampleSizeIterations}{
-  Number of iterations for each sample allocation update step.
+  \item{iterations}{
+  Number of iterations of the allocation. 
   }
   \item{p}{
   The exponent for the penalty function, fractional exponents are available.
@@ -142,13 +121,15 @@ saSampleAlloc(
 # characteristics split between two strata
 x <- matrix(rnorm( 100*4 ),ncol=4)  
 
-# create an initial set of strata assignments 
-label <- c(rep(0,50),rep(1,50)) 
+total <- colSums(x)
+
+S2 <- apply( x, 2, var)
 
 # run minCV for a sample size of 20
 b <- saSampleAlloc(
-  x,
-  label,
+  total,
+  S2,
+  strataSize=rep(50,2),
   targetCV=c(0.08, 0.10, 0.05, 0.08),
   sampleSize=20
 )

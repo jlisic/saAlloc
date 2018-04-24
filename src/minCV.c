@@ -472,8 +472,8 @@ size_t minCV_randomState (
  
     /* check if there are units that I can move */ 
     if( 
-        (Nh[ I[i] ] > 2)  &      
-        (Nh[ I[i] ] > a->nh[ I[i] ])  
+        (Nh[ I[i] ] > 2)  //&      
+        //(Nh[ I[i] ] > a->nh[ I[i] ])  
         ) {
       
       a->Hj = minCV_getMoveStrata( i, I, a->prob, a->probMatrix, N, H);
@@ -496,7 +496,7 @@ size_t minCV_randomState (
 
   // record Hi
   a->Hi = I[i];
-
+        
 //  printf("Moving %d [%d] to [%d]\n", (int) i, (int) a->Hi, (int) a->Hj);
 
   /* return index */
@@ -628,8 +628,14 @@ double minCV_costChange (
       a->Hj ); 
 
   // update Nh
-  a->candidate_Nh[I[i]]--;
+  a->candidate_Nh[a->Hi]--;
   a->candidate_Nh[a->Hj]++;
+
+  // if necessary update candidate nh
+  if( a->candidate_Nh[a->Hi] < a->candidate_nh[a->Hi] ) {
+    a->candidate_nh[a->Hi]--;
+    a->candidate_nh[a->Hj]++;
+  } 
 
   // calculate the CV 
   cv_calcCV( 

@@ -108,9 +108,10 @@ c(
 #)
 
 
+set.seed(100)
 
 av_check <- c()
-for( i in 1:10000) {
+for( i in 1:100000) {
 y <-  x * Beta + rnorm(N,sd=locAdj)
 
 label <- rep(1:3,length.out=N)
@@ -123,13 +124,13 @@ table_av_check <- data.frame(
 
 colnames(table_av_check) <- c('Nh','nh','var')
       
-av_check <- c( av_check, sqrt( sum( table_av_check$Nh^2/table_av_check$nh * 
-                (1-table_av_check$nh/table_av_check$Nh) * table_av_check$var)) / sum(y)  )
+av_check <- c( av_check, sum( table_av_check$Nh^2/table_av_check$nh * 
+                (1-table_av_check$nh/table_av_check$Nh) * table_av_check$var))   
 
 }
 
 print(mean(av_check))
-print(sd(av_check))
+print(sd(av_check)/sqrt(100000))
 
 
 
@@ -140,15 +141,22 @@ table_av_true <- data.frame(
   var=aggregate(x,by=list(label),var)$x
 )
 check_adjustment <- data.frame(
-  Nh=strata_with_adjustment$strataSize,
-  nh=strata_with_adjustment$sampleSize,
-  var=aggregate(locAdj^2,by=list(strata_with_adjustment$label),mean)$x
+  Nh=aggregate(label,by=list(label),length)$x,
+  nh=rep(20,3),
+  var=aggregate(locAdj^2,by=list(label),mean)$x
 )
 colnames(check_adjustment) <- c('Nh','nh','adj')
 colnames(table_av_true) <- c('Nh','nh','var')
       
-av_true <- sqrt( sum( table_av_true$Nh^2/table_av_true$nh * 
-                (1-table_av_true$nh/table_av_true$Nh) * (check_adjustment$adj + table_av_true$var))) / sum(y)  
+av_true <- sum( table_av_true$Nh^2/table_av_true$nh * 
+                (1-table_av_true$nh/table_av_true$Nh) * (check_adjustment$adj + table_av_true$var))
+
+print(av_true)
+print(
+(1.96 * sd(av_check) + mean(av_check) > av_true ) & 
+(-1.96 * sd(av_check) + mean(av_check) < av_true)
+)
+
 
 
 

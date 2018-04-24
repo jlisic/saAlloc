@@ -1,41 +1,6 @@
 /* Jonathan Lisic */
-/* standard libraries */
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <math.h>
-
-#include "R.h"
-
 /* program headers */
-#include "dist.h"
-//#include "file.h"
-#include "sa.h"
-
-#include "minCV.h"
-
-/* this needs to be updated for other platforms if not using gcc */
-/* and also for running on 32 bit archs */
-#define F_SIZET "%zu"
-
-
-
-
-
-/* byebye */
-/*
-void byebye ( void ) {
-  free(I);
-  free(IFin);
-  free(QFin);
-
-//  deleteMDA( (void *) domain, MDA_SIZE_T, 3, H, K); 
-
-  minCV_delete( A, K, N );
-}
-*/
-
-
+#include "mainMinCV.h"
 
 
 

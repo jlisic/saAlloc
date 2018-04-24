@@ -41,7 +41,6 @@ double *** cv_createMeanMatrix(
 
   /* note that the first K entries in the domain are the commodities */
 
-//  #pragma omp for private(k,r,j,h) 
   for(i = 0; i < xN; i++ ) { 
 
      k = i / (N*R); /* commodity index */
@@ -51,7 +50,6 @@ double *** cv_createMeanMatrix(
 
      h = I[j];       /* stratum */
 
-//     #pragma omp atomic
      mu[k][h][r] += x[i] / (double) Nh[h];  
   }
   
@@ -84,7 +82,6 @@ double *** cv_createVarMatrix(
 
   size_t xN = N * R * K;
   
-//  #pragma omp for private(k,r,j,h) 
   for(i = 0; i < xN; i++ ) { 
 
      k = i / (N*R); /* commodity index */
@@ -95,7 +92,6 @@ double *** cv_createVarMatrix(
 
      h = I[j];       /* stratum */
 
-//     #pragma omp atomic
      V[k][h][r] += 
         (x[i] - mu[k][h][r]) * (x[i] - mu[k][h][r]) / ( (double) (Nh[h] - 1) ); 
   }
@@ -131,10 +127,13 @@ void cv_updateMatrix(
 
   size_t priorObsStratum = I[moveObs];
 
+/* for debug */
+/*
 #ifdef CV_DEBUG
 printf(" moveFrom: %d\n", (int) priorObsStratum);
 printf(" moveTo: %d\n",   (int) moveObsStratum);
 #endif
+*/
 
   /* return if there is no change in stratum */
   if( priorObsStratum == moveObsStratum ) return;
@@ -606,9 +605,11 @@ double cv_objectiveFunctionCompare(
       result_penalty+= delta * penalty[j]; 
     }
   }
+ // printf("result no penalty: %4.12f\n", result); 
+ // printf("penalty: %4.12f\n", result_penalty) ;
 
-  result=sqrt(result) + result_penalty;
-  resultPrior = sqrt(resultPrior) + resultPrior_penalty;
+  result=pow(result,1/p) + result_penalty;
+  resultPrior = pow(resultPrior,1/p) + resultPrior_penalty;
 
   if( obj != NULL ) *obj = result;
   if( objPrior != NULL ) *objPrior = resultPrior;
@@ -617,8 +618,7 @@ double cv_objectiveFunctionCompare(
   if( failFlag == 1) return(INFINITY);
 
 //printf("(%4.12f) (%4.12f)", result, resultPrior);
-printf("%4.12f ", result);
-printf("\n");
+//printf("penlalized objective function %4.12f\n", result);
   return( result - resultPrior );
 }  
   

@@ -56,5 +56,25 @@ void alloc_sampleSizeChange (
     ); 
 
 
+void R_sampleAlloc (
+  double * totalDouble,    /* the column major listing of means      J*R  */
+  double * varDouble,   /* the column major listing of variances  J*H*R  */
+  int * JInt,      /* number of variables */
+  int * HInt,      /* number of strata */
+  int * RInt,      /* number of observations of each PSU (e.g. years) */
+  int * iterInt,   /* number of interations                  1      */
+  int * domainInt, /*                                        H*J  */
+  double * target,   /* target CV*/
+  double * locationAdjDouble,  
+  double * scaleAdjDouble,
+  double * pDouble,
+  double * penalty,  /* length J */
+  double * nh,      /* sample size by stratum */
+  int * NhInt,      /* pop size by stratum */
+  double * a,  // what we return
+  double * cooling,
+  int * fpc
+);               
+
 
 #endif
